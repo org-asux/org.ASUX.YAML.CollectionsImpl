@@ -44,66 +44,69 @@ import java.util.LinkedHashMap;
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
  * @see org.ASUX.yaml.AbstractYamlEntryProcessor
  */
-public class ReadYamlEntry extends AbstractYamlEntryProcessor {
+public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReadYamlEntry";
+    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReplaceYamlEntry";
 
     public final boolean verbose;
-    public int count = 0;
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public ReadYamlEntry(boolean _verbose) {
+    public ReplaceYamlEntry(boolean _verbose) {
         this.verbose = _verbose;
-        this.count = 0;
+//        keys2bRemoved = new LinkedHashMap<>();
     }
+
+    protected final LinkedHashMap<Object,Map> keys2bRemoved = new LinkedHashMap<>();
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     
     /** This function will be called when a partial match of a YAML path-expression happens.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onPartialMatch}
      */
     protected boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+        // Do Nothing for "Replace YAML-entry command"
         return true;
     }
 
     //-------------------------------------
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
     protected boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        this.count ++;
-//        System.out.print("onEnd2EndMatch: _end2EndPaths =");
-//        _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
-        System.out.println(_parentMap.get(_key).toString());
-
+//        if ( this.verbose ) {
+            System.out.print("onEnd2EndMatch: _end2EndPaths =");
+            _end2EndPaths.forEach( s -> System.out.print(s+", ") );
+            System.out.println("");
+//        }
+        this.keys2bRemoved.put( _key, _parentMap );
         return true;
     }
 
     //-------------------------------------
     /** This function will be called whenever the YAML path-expression fails to match.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail()
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onMatchFail}
      */
     protected void onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+        // Do Nothing for "Replace YAML-entry command"
     }
 
     //-------------------------------------
     /** This function will be called when processing has ended.
      * After this function returns, the AbstractYamlEntryProcessor class is done!
-     * See details in @see org.ASUX.yaml.AbstractYamlEntryProcessor#oatEndOfInput()
+     * See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
     protected void atEndOfInput(final Map _map, final YAMLPath _yamlPath) {
 
-        if ( this.verbose ) System.out.println("Total=" + this.count );
+        if ( this.verbose ) System.out.println("atEndOfInput: count=" + this.keys2bRemoved.size() );
+        this.keys2bRemoved.forEach((k, parentMap) -> { parentMap.remove(k); });
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

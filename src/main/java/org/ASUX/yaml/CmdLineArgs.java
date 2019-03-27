@@ -34,19 +34,35 @@ package org.ASUX.yaml;
 
 import org.apache.commons.cli.*;
 
+/** <p>This class is a typical use of the org.apache.commons.cli package.</p>
+ *  <p>This class has No other function - other than to parse the commandline arguments and handle user's input errors.</p>
+ *  <p>For making it easy to have simple code generate debugging-output, added a toString() method to this class.</p>
+ *  <p>Typical use of this class is: </p>
+ *<pre>
+ public static void main(String[] args) {
+ cmdLineArgs = new CmdLineArgs(args);
+ .. ..
+ *</pre>
+ *
+ *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
+ * @see org.ASUX.yaml.Cmd
+ */
 public class CmdLineArgs {
 
     public boolean verbose = false;
-    public boolean readCmd = true;
-    public boolean delCmd = false;
-    public boolean listCmd = false;
-    public boolean replaceCmd = false;
+    public boolean isReadCmd = true;
+    public boolean isListCmd = false;
+    public boolean isDelCmd = false;
+    public boolean isReplaceCmd = false;
     public String yamlPathStr = "*";
     public String inputFilePath = "/tmp/i";
     public String outputFilePath = "/tmp/o";
     public com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    /** Constructor.
+     * @param args command line argument array - as received as-is from main().
+     */
     public CmdLineArgs(String[] args) {
         Options options = new Options();
         
@@ -58,8 +74,8 @@ public class CmdLineArgs {
         //----------------------------------
         OptionGroup grp = new OptionGroup();
         Option readCmdOpt = new Option("r", "read", false, "output all elements that match");
-        Option delCmdOpt = new Option("d", "delete", false, "Delete all elements that match");
         Option listCmdOpt = new Option("l", "list", false, "List YAML-Keys of all elements that match");
+        Option delCmdOpt = new Option("d", "delete", false, "Delete all elements that match");
         Option replCmdOpt = new Option("c", "change", true, "change/replace all elements that match - with json provided on cmdline");
             replCmdOpt.setOptionalArg(false);
             replCmdOpt.setArgs(1);
@@ -105,9 +121,10 @@ public class CmdLineArgs {
             cmd = parser.parse(options, args);
 
             this.verbose = cmd.hasOption("verbose");
-            this.readCmd = cmd.hasOption("read");
-            this.delCmd = cmd.hasOption("delete");
-            this.listCmd = cmd.hasOption("list");
+            this.isReadCmd = cmd.hasOption("read");
+            this.isListCmd = cmd.hasOption("list");
+            this.isDelCmd = cmd.hasOption("delete");
+            this.isReplaceCmd = cmd.hasOption("change");
             this.yamlPathStr = cmd.getOptionValue("yamlpath");
             this.inputFilePath = cmd.getOptionValue("inputfile");
             this.outputFilePath = cmd.getOptionValue("outputfile");
@@ -126,13 +143,15 @@ public class CmdLineArgs {
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    /** For making it easy to have simple code generate debugging-output, added this toString() method to this class.
+     */
     public String toString() {
-        return "verbose="+verbose+" read="+readCmd+" delete="+delCmd+" list="+listCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" quoting="+quoteType.toString();
+        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" quoting="+quoteType.toString();
     }
     
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    public static void main(String[] args) {
+//    public static void main(String[] args) {
 //        new CmdLineArgs(args);
-    }
+//    }
 
 }

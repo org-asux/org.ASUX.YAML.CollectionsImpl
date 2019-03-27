@@ -40,12 +40,28 @@ import java.util.regex.*;
 
 import static org.junit.Assert.*;
 
+/** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
+ *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
+ *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
+ * @see org.ASUX.yaml.ReadYamlEntry
+ * @see org.ASUX.yaml.ListYamlEntry
+ * @see org.ASUX.yaml.DeleteYamlEntry
+ * @see org.ASUX.yaml.ReplaceYamlEntry
+*/
 public abstract class AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.AbstractYamlEntryProcessor";
 
+    /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
+     *  <p>It's read-only (final data-attribute).</p>
+     */
     public final boolean verbose;
 
+    /** The only Constructor.
+     *  @param _verbose Whether you want deluge of debug-output onto System.out
+     */
     public AbstractYamlEntryProcessor(boolean _verbose) {
         this.verbose = _verbose;
     }
@@ -55,49 +71,74 @@ public abstract class AbstractYamlEntryProcessor {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    /* This function will be called when a partial match of a YAML path-expression happens.
-     * Example: if the YAML-Path-regexp is paths.*.*.responses.200.description
-     * This function will be called for: paths./pet   paths./pet.put   paths./pet.put.responses paths./pet.put.responses.200
-     * Note: This function will NOT be invoked for a full/end2end match at paths./pet.put.responses.200.description
-     * That full/end2end match will trigger the other function "onEnd2EndMatch()".
+    /** <p>This function will be called when a partial match of a YAML path-expression happens.</p>
+     * <p>Example: if the YAML-Path-regexp is <code>paths.*.*.responses.200.description</code></p>
+     * <p>This function will be called for: <code>paths./pet   paths./pet.put   paths./pet.put.responses paths./pet.put.responses.200</code></p>
+     * <p>Note: This function will NOT be invoked for a full/end2end match for <code>paths./pet.put.responses.200.description</code></p>
+     * <p>That full/end2end match will trigger the other function "onEnd2EndMatch()".</p>
      *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+     * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".
+     *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
+     *  @param _key The value (typically a String) is what matched the _yamlPath.  Use it to get the "rhs" of the YAML element pointed to by _key
+     *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
+     *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
+     *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
      */
-    abstract boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
 
     //-------------------------------------
-    /* This function will be called when a full/end2end match of a YAML path-expression happens.
-     * Example: if the YAML-Path-regexp is paths.*.*.responses.200.description
-     * This function will be called ONLY for     paths./pet.put.responses.200.description
-     * That partial matches (of "parent yaml-elements" will trigger the other function "onPartialMatch()".
-     * The words "onFullMatch" * "onCompleteMatch()" are confusing from user/regexp perspective.
-     *  Hence the choice of onEnd2EndMath() as the function name.
+    /** <p>This function will be called when a full/end2end match of a YAML path-expression happens.</p>
+     * <p>Example: if the YAML-Path-regexp is <code>paths.*.*.responses.200.description</code></p>
+     * <p>This function will be called ONLY for  <code>paths./pet.put.responses.200.description</code></p>
+     * <p>Partial matches (of "parent yaml-elements") will trigger the other function "onPartialMatch()".</p>
+     * <p>The words "onFullMatch" * "onCompleteMatch()" are confusing from user/regexp perspective.
+     *  Hence the choice of onEnd2EndMath() as the function name.</p>
      *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+     * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the "bottom-most" YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".  This map could be potentially represent a simple YAML element like "name: petid"
+     *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
+     *  @param _key The value (typically a String) is what matched the _yamlPath.  For "YAML Query", the "rhs" of the YAML element pointed to by _key is what you're looking for.  For "YAML Delete" or "YAML Replace", you do Not care about the "rhs".. just use the _key to remove the entry/replace the "rhs".
+     *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
+     *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
+     *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
      */
-    abstract boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
 
     //-------------------------------------
-    /* This function will be called whenever the YAML path-expression fails to match.
-     * This will be called way too often.  It's only interesting if you want a "negative" match scenario (as in show all rows that do Not match)
+    /** <p>This function will be called whenever the YAML path-expression fails to match.</p>
+     * <p>This will be called way too often.  It's only interesting if you want a "negative" match scenario (as in show all rows that do Not match)</p>
      *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+     * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
+     * <p>Note: Unlike the other abstract methods of this Abstract class, this does NOT have a return-value.</p>
+     *
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file (as pointed to by "_yamlPath" and "_key") - representing where PathPattern match failed.  This map could be potentially represent a simple YAML element like "name: petid"
+     *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
+     *  @param _key The value (typically a String) is what *FAILED* to match the _yamlPath.
+     *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
+     *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      */
-    abstract boolean onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract void onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths);
 
     //-------------------------------------
-    /* This function will be called when processing has ended.
-     * After this function returns, the AbstractYamlEntryProcessor class is done!
+    /** <p>This function will be called when processing has ended.</p>
+     *  <p>After this function returns, the AbstractYamlEntryProcessor class is done!</p>
      *
-     * You can fuck with the contents of any of the parameters passed, to your heart's content.
+     *  <p>You can fuck with the contents of any of the parameters passed, to your heart's content.</p>
+     *
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      */
-    abstract boolean atEndOfInput(final Map _map, final YAMLPath _yamlPath);
+    protected abstract void atEndOfInput(final Map _map, final YAMLPath _yamlPath);
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    /* This is NOT NOT NOT NOT NOT ........RECURSION - NOT - FUNCTION.
-     * Takes a java.utils.Map created by com.esotericsoftware.yamlbeans library.
-     * Takes a Regexp parameter _yamlPathStr (in string form)
+    /** <p>Internal Note: This is <b>NOT NOT NOT NOT NOT</b> ........ a RECURSIVE-FUNCTION.</p>
+     *  <p>This is a simple way to invoke the real-recursive function {@link #recursiveSearch}.</p>
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _yamlPathStr Example: "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
+     *  @return true = whether at least one match happened.
+     *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
      */
     public boolean searchYamlForPattern(Map _map, String _yamlPathStr) throws com.esotericsoftware.yamlbeans.YamlException {
         final LinkedList<String> end2EndPaths = new LinkedList<>();
@@ -110,9 +151,15 @@ public abstract class AbstractYamlEntryProcessor {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    /* This is RECURSION FUNCTION.
-     * This function returns true, if the invocation (or it's recursion) did find a match (partial or end2end).
-     * For now, I'm Not using the return value ANYWHERE.   Either I will - or - will refactor the return as Void.
+    /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
+     *  <p><b>Don't tell me I did NOT warn you!</b>  Use the {@link searchYamlForPattern} function instead.</p>
+     *  <p>This function returns true, if the invocation (or it's recursion) did find a match (partial or end2end).<br>
+     *  For now, I'm Not using the return value ANYWHERE.   Either I will - or - will refactor the return as Void.</p>
+     *  @param _map This contains the java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _yamlPath This is the {@link YAMLPath} class consstructed using example strings like "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This string is a human readable pattern, NOT a proper RegExp-pattern</b>
+     *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
+     *  @return true = whether at least one match happened.
+     *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
      */
     public boolean recursiveSearch(Map _map, final YAMLPath _yamlPath, final LinkedList<String> _end2EndPaths )
     throws com.esotericsoftware.yamlbeans.YamlException {
@@ -148,8 +195,8 @@ public abstract class AbstractYamlEntryProcessor {
                     // well! we've matched end2end .. to a "Map" element (instead of String elem)!
 
                     // let sub-classes determine what to do here
-                    onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
-                    // What should be done if onEnd2EndMatch returns false.. ?
+                    final boolean ret3 = onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
+                    if ( ! ret3 ) continue; // Pretend as if match failed.
                     _end2EndPaths.removeLast();
 
                     if ( this.verbose ) System.out.println(CLASSNAME +": deleting entry in YAML-file: "+ _yamlPath.getPrefix() +" "+ key  +":\t"+  rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) +"\t\t type '"+rhs.getClass().getName() +"'");
@@ -162,8 +209,8 @@ public abstract class AbstractYamlEntryProcessor {
                 // If we're here, it means INCOMPLETE match..
 
                 // let sub-classes determine what to do here
-                onPartialMatch(_map, _yamlPath, key, _map, _end2EndPaths );
-                // What should be done if onPartialMatch returns false.. ?
+                final boolean ret2 = onPartialMatch(_map, _yamlPath, key, _map, _end2EndPaths );
+                if ( ! ret2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
 
                 if ( this.verbose ) System.out.println(CLASSNAME + ": recursing with YAMLPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +": ... @ YAML-file-location: '"+ key +"': "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
 
@@ -185,21 +232,19 @@ public abstract class AbstractYamlEntryProcessor {
                         } else {
                             System.err.println(CLASSNAME +": incomplete code: failure w Array-type '"+ rhs.getClass().getName() +"'");
                             onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for failure-2-match
-                            // What should be done if onMatchFail returns false.. ?
                         } // if-Else   o instanceof Map - (WITHIN FOR-LOOP)
                     } // for Object o: arr
                 } else if ( rhs instanceof java.lang.String ) {
                     // yeah! We found a full end2end match!  No more recursion is feasible.
                     // let sub-classes determine what to do here
-                    onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
-                    // What should be done if onMatchFail returns false.. ?
+                    final boolean ret5 = onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
+                    if ( ! ret5 ) continue; // Pretend as if match failed.
                     _end2EndPaths.clear();
                     matchFound = true;
                     if ( this.verbose ) System.out.println(CLASSNAME +": deleting entry: "+ key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
                 } else {
                     System.err.println(CLASSNAME +": incomplete code: Unable to handle rhs of type '"+ rhs.getClass().getName() +"'");
                     onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #2 for failure-2-match
-                    // What should be done if onMatchFail returns false.. ?
                 } // if-else   rhs instanceof   Map/Array/String/.. ..
 
                 // As we've had AT-LEAST a PARTIAL-MATCH, in CURRENT-ITERATION (of FOR-LOOP).. ..
@@ -209,7 +254,6 @@ public abstract class AbstractYamlEntryProcessor {
             } else {
                 // Failure of yamlPElemPatt.matcher  -- -- i.e., to match YAML-Path pattern.
                 onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #3 for failure-2-match
-                // What should be done if onMatchFail returns false.. ?
                 
             }// if-else yamlPElemPatt.matcher()
 

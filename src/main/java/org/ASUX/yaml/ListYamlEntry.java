@@ -36,6 +36,14 @@ import java.util.Map;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
 
+/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
+ *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
+ *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
+ *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
+ * @see org.ASUX.yaml.AbstractYamlEntryProcessor
+ */
 public class ListYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ListYamlEntry";
@@ -43,6 +51,9 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
     public final boolean verbose;
     public int count = 0;
 
+    /** The only Constructor.
+     *  @param _verbose Whether you want deluge of debug-output onto System.out
+     */
     public ListYamlEntry(boolean _verbose) {
         this.verbose = _verbose;
         this.count = 0;
@@ -51,31 +62,20 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     
-    /* This function will be called when a partial match of a YAML path-expression happens.
-     * Example: if the YAML-Path-regexp is paths.*.*.responses.200.description
-     * This function will be called for: paths./pet   paths./pet.put   paths./pet.put.responses paths./pet.put.responses.200
-     * Note: This function will NOT be invoked for a full/end2end match at paths./pet.put.responses.200.description
-     * That full/end2end match will trigger the other function "onEnd2EndMatch()".
-     *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+    /** This function will be called when a partial match of a YAML path-expression happens.
+     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
      */
-    boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
         // Do Nothing for "delete YAML-entry command"
         return true;
     }
 
     //-------------------------------------
-    /* This function will be called when a full/end2end match of a YAML path-expression happens.
-     * Example: if the YAML-Path-regexp is paths.*.*.responses.200.description
-     * This function will be called ONLY for     paths./pet.put.responses.200.description
-     * That partial matches (of "parent yaml-elements" will trigger the other function "onPartialMatch()".
-     * The words "onFullMatch" * "onCompleteMatch()" are confusing from user/regexp perspective.
-     *  Hence the choice of onEnd2EndMath() as the function name.
-     *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+    /** This function will be called when a full/end2end match of a YAML path-expression happens.
+     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
         this.count ++;
 //        System.out.print("onEnd2EndMatch: _end2EndPaths =");
@@ -86,27 +86,24 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
     }
 
     //-------------------------------------
-    /* This function will be called whenever the YAML path-expression fails to match.
-     * This will be called way too often.  It's only interesting if you want a "negative" match scenario (as in show all rows that do Not match)
-     *
-     * Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.
+    /** This function will be called whenever the YAML path-expression fails to match.
+     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail()
      */
-    boolean onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected void onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
         // Do Nothing for "delete YAML-entry command"
-        return true;
     }
 
     //-------------------------------------
-    /* This function will be called when processing has ended.
+    /** This function will be called when processing has ended.
      * After this function returns, the AbstractYamlEntryProcessor class is done!
+     * See details in @see org.ASUX.yaml.AbstractYamlEntryProcessor#oatEndOfInput()
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    boolean atEndOfInput(final Map _map, final YAMLPath _yamlPath) {
+    protected void atEndOfInput(final Map _map, final YAMLPath _yamlPath) {
 
         if ( this.verbose ) System.out.println("Total=" + this.count );
-        return true;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

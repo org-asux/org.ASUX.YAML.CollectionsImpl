@@ -37,16 +37,33 @@ import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.Map;
-import java.util.LinkedList;
-import java.util.ArrayList;
+
+//import java.util.Map;
+//import java.util.LinkedList;
+//import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-import java.util.regex.*;
+//import java.util.regex.*;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/** <p>This class is the "wrapper-processor" for the various "YAML-commands" while traverse a YAML file.</p>
+ *  <p>The 4 YAML-COMMANDS are: read/query, list, delete and replace.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
+ *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>See full details of how to use this in this GitHub project's wiki - or - in <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project and its wiki.</p>
+ *
+ *  <p>Example: <code>java org.ASUX.yaml.Cmd --delete --yamlpath "paths.*.*.responses.200" -i $cwd/src/test/my-petstore-micro.yaml -o /tmp/output2.yaml  --double-quote</code><br>
+ *  Example: <b><code>java org.ASUX.yaml.Cmd</code></b> will show all command line options supported.</p>
+ * @see org.ASUX.yaml.YAMLPath
+ * @see org.ASUX.yaml.CmdLineArgs
+ *
+ * @see org.ASUX.yaml.ReadYamlEntry
+ * @see org.ASUX.yaml.ListYamlEntry
+ * @see org.ASUX.yaml.DeleteYamlEntry
+ * @see org.ASUX.yaml.ReplaceYamlEntry
+ */
 public class Cmd {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.Cmd";
@@ -58,7 +75,9 @@ public class Cmd {
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+    /** This is NOT testing code.  It's actual means by which user's command line arguments are read and processed
+     *  @param args user's commandline arguments
+     */
     public static void main(String[] args) {
 
         CmdLineArgs cmdLineArgs = null;
@@ -74,27 +93,34 @@ public class Cmd {
             LinkedHashMap data = new com.esotericsoftware.yamlbeans.YamlReader(reader).read(LinkedHashMap.class);
             
             //-----------------------
-            if ( cmdLineArgs.delCmd ) {
+            if ( cmdLineArgs.isReadCmd ) {
+                ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose );
+                readcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+            } else if ( cmdLineArgs.isListCmd ) {
+                ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose );
+                listcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+            } else if ( cmdLineArgs.isDelCmd ) {
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to load file.");
 
                 DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose );
                 delcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
-                
+
                 com.esotericsoftware.yamlbeans.YamlWriter writer = new com.esotericsoftware.yamlbeans.YamlWriter( new FileWriter(cmdLineArgs.outputFilePath) );
                 // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
                 writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
 //                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
-                //                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
-                //                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
-                //                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
                 writer.write(data);
                 writer.close();
-            } else if ( cmdLineArgs.readCmd ) {
-                ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose );
-                readcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
-            } else if ( cmdLineArgs.listCmd ) {
-                ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose );
-                listcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+            } else if ( cmdLineArgs.isReplaceCmd ) {
+                ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose );
+                replcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+
+                com.esotericsoftware.yamlbeans.YamlWriter writer = new com.esotericsoftware.yamlbeans.YamlWriter( new FileWriter(cmdLineArgs.outputFilePath) );
+                writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
+//                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
             } else {
                 System.err.println("Unimplemented command: "+cmdLineArgs.toString() );
             }

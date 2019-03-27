@@ -42,9 +42,22 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
 
-/* This class encapsulates a YAML element, makes it super-easy to parse & manipulate it.
- * In fact, this class makes it very safe to assume that everything is valid and squeaky-clean.
+/** This class encapsulates a YAML element, and makes it super-easy to parse and manipulate it.
+ * In fact, this class makes it very safe to assume that the user's input (for the YAMLPath/pattern) is valid and squeaky-clean.
  * That is, you should expect minimal run-time errors.
+ *<pre>
+ public static void main(String[] args) {
+    cmdLineArgs = new CmdLineArgs(args);
+    .. ..
+    for loop ..
+        if ( ! _yamlPath.hasNext() ) return false; // YAML path has ended
+        final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
+        System.out.println(CLASSNAME + ": @# " + _yamlPath.index() +"\t"+ _yamlPath.getPrefix() +"\t"+ _yamlPath.get() +"\t"+ _yamlPath.getSuffix() + "\t  matched '"
+        .. ..
+        final YAMLPath cloneOfYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in and out of sub-yaml-elements
+</pre>
+ *
+ * @see org.ASUX.yaml.Cmd
  */
 public class YAMLPath implements Serializable {
 
@@ -57,15 +70,18 @@ public class YAMLPath implements Serializable {
 
     private int indexPtr = -1;
 
-    /*  Takes a YAML Path like paths./pet.put.consumes
-     *  It breaks it up into regexpressions separated by DELIMITER
+    /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
+     *  <p>It breaks it up into regexpressions separated by the default DELIMITER = "."</p>
+     *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "."
      */
     public YAMLPath(String _yp) {
         this(_yp, "\\.");
     }
 
-    /*  Takes a YAML Path like paths./pet.put.consumes
-     *  It breaks it up into regexpressions separated by DELIMITER
+    /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
+     *  <p>It breaks it up into regexpressions separated by DELIMITER</p>
+     *  @param _yp example: "<code>paths.*.*.responses.200</code>"
+     *  @param _delim examples are "." or "\t"  or "," .. ..
      */
     public YAMLPath(String _yp, final String _delim) {
         this.yamlPath = _yp; //save it
@@ -114,11 +130,16 @@ public class YAMLPath implements Serializable {
     } // Constructor
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+    /** Whether the instance of this class is valid (in case you are passed this object by some other code, this is your sanity check).. .. before you invoke any of the other functions in ths class and end up with runtime errors
+     *  @return true means all the methods in this class are GUARANTEED to NOT Throw any runtime exception :-)
+     */
     public boolean isValid() {
         return this.isValid;
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", your first call will return true.  If you call {@link next} <b>up to 4 times</b>, this function will return true.  After you call next() a 5th time, this function will return false.
+     *  @return true means {@link get} will return a valid string, GUARANTEED to NOT Throw any runtime exception :-)
+     */
     public boolean hasNext() {
         // System.out.println(CLASSNAME + ":hasNext(): Starting.");
         if ( ! this.isValid ) return false;
@@ -128,6 +149,9 @@ public class YAMLPath implements Serializable {
             return false;
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", your <b>1st 5 invocations</b> will return a valid string (exact same values as 1st 5 invocations of get()).  After you call it a 6th time (for same example), this function will return null(String).
+     *  @return String a string that does NOT have periods/dots in it.  The string may be (based on example above) = "*".
+     */
     public String next() {
         if ( ! this.isValid ) return null;
         String retstr = null;
@@ -138,6 +162,9 @@ public class YAMLPath implements Serializable {
         return retstr;
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", after your first call to next(), this will return "paths".  For the 2nd call to next(), this function will return "*".  After you call next() a 5th time(or more), this function will return null(String).
+     *  @return a string that does NOT have periods/dots/delimiter in it.  The string may be (based on example above) = "*".
+     */
     public String get() {
         if ( ! this.isValid ) return null;
         if ( this.indexPtr < this.yamlElemArr.length )
@@ -146,6 +173,9 @@ public class YAMLPath implements Serializable {
             return null;
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", your first call will return 0 (index numbering per C/Java array-index standard).  Every call to next() will increment the return value of this function.  When you call next() a 5th/6th/7th/../100th time for above example, this function will return the same value then onwards (= # of elements in the YAMLPath-string.  In this example, that is 5)
+     *  @return integer &gt;= 0 (if things are working) and -1 is things are screwed up.
+     */
     public int index() {
         if ( ! this.isValid ) return -1;
         if ( this.indexPtr < this.yamlElemArr.length )
@@ -154,6 +184,9 @@ public class YAMLPath implements Serializable {
             return this.yamlElemArr.length;
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", before your 1st call to next(), this function will return ""(empty string).  After the 1st call to next(), this function will return "paths".  After the 2nd call to next(), this will return "paths.*".  After you call next() a 5th time (or more), this function will return "<code>paths.*.*.responses.200</code>".
+     *  @return a string that does NOT have periods/dots in it.  The string may be (based on example above) = "*".
+     */
     public String getPrefix() {
         if ( ! this.isValid ) return null;
         if ( this.indexPtr < this.yamlElemArr.length ) {
@@ -169,6 +202,9 @@ public class YAMLPath implements Serializable {
         }
     }
 
+    /** For example strings like "<code>paths.*.*.responses.200</code>", before your 1st call to next(), this function will return "<code>paths.*.*.responses.200</code>".  After the 1st call to next(), this function will return "<code>*.*.responses.200</code>".  After the 3rd call to next(), this will return "<code>responses.200</code>".  After you call next() a 5th time(or more), this function will return null(String).
+     *  @return a string that does NOT have periods/dots in it.  The string may be (based on example above) = "*".
+     */
     public String getSuffix() {
         if ( ! this.isValid ) return null;
         if ( this.indexPtr < this.yamlElemArr.length ) {
@@ -194,7 +230,9 @@ public class YAMLPath implements Serializable {
 //        }
 //    }
 
-    /* This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
+    /** This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
+     *  @param _orig what you want to deep-clone
+     *  @return a deep-cloned copy, created by serializing into a ByteArrayOutputStream and reading it back (leveraging ObjectOutputStream)
      */
     public static YAMLPath deepClone(YAMLPath _orig) {
         try {
@@ -213,15 +251,15 @@ public class YAMLPath implements Serializable {
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    
-    public static void main(String[] args) {
-        // System.out.println(CLASSNAME + ": started with '"+args[0]+"'");
-        YAMLPath yp = new YAMLPath(args[0]);
-        // System.out.println(CLASSNAME + ": parsing complete");
-        while (yp.hasNext()) {
-            System.out.println("@# " + yp.index() +"\t"+ yp.getPrefix() +"\t"+ yp.get() +"\t"+ yp.getSuffix() );
-            yp.next();
-        }
-    }
+
+//    public static void main(String[] args) {
+//        // System.out.println(CLASSNAME + ": started with '"+args[0]+"'");
+//        YAMLPath yp = new YAMLPath(args[0]);
+//        // System.out.println(CLASSNAME + ": parsing complete");
+//        while (yp.hasNext()) {
+//            System.out.println("@# " + yp.index() +"\t"+ yp.getPrefix() +"\t"+ yp.get() +"\t"+ yp.getSuffix() );
+//            yp.next();
+//        }
+//    }
 
 }
