@@ -42,9 +42,22 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
 
-/** This class encapsulates a YAML element, and makes it super-easy to parse and manipulate it.
- * In fact, this class makes it very safe to assume that the user's input (for the YAMLPath/pattern) is valid and squeaky-clean.
+/** This class encapsulates a YAML Path/Pattern, and makes it super-easy to parse and manipulate it.
+ *  In fact, this class makes it very safe to assume that the user's input (for the YAMLPath/pattern) is valid and squeaky-clean.
  * That is, you should expect minimal run-time errors.
+ *
+ *  <p>A <b>YAML Path</b> (also referred to as: <b>YAML Path-Pattern</b>) is composed of one or more Path-<b>ELEMENT</b>-Patterns separated by "delimiter" (like period/dot/".")</p>
+ <p>If you'd like to use delimiters other than period/dot/"." then you'll be foreced to write Java-code, as commandline does Not support any other delimiter (for now).</p>
+ <p>Here are rules for YAML Path Pattern</p>
+ <ol>
+ <li>Except for the 2nd rule (below) all RegExp symbols(like <code><b>'+'</b></code> or <code><b>"[{]}</b></code> as defined & supported by java.util.regex) it will work - guaranteed.</li>
+ <li><b>Important - there is ONLY 1 deviation/substitution</b>: Whenever a star/asterisk/<code><b>'*'</b></code> with a delimiter on either side (that is, the Path-ELEMENT is = exactly star/asterisk/<code><b>'+'</b></code>).. .. is detected, it is <b>automatically</b> replaced with <code><b>".*"</b></code><br/>This substitution is only for human convenience.</li>
+ <li>Any other use of RegExp compatible star/asterisk/<code><b>'*'</b></code> (example: <code>paths./pet*.{get|put|post}.responses.200</code>) will be used as is - to match YAML elements.</li>
+ <li>Note: <code><b>**</b></code> (<b>double</b> star/asterisk/<code><b>"*"</b></code>) implies unlimited-match prefix.  It's a Special case: <code>"**"</code> represents a deviation of java.util.regexp specs on what qualifies as a regular-expression.  This deviation is a very human-friendly easy-2-understand need.</li>
+ </ol>
+ <p>Example: <code>paths.*.*.responses.200"</code>.  <b>ATTENTION: This is a human readable pattern, NOT a 100% proper RegExp-pattern</b></p>
+ <p>Example: <code>paths./pet*.{get|put|post}.responses.200</code>.  <b>ATTENTION: This is 100% proper RegExp-pattern</b></p>
+ *
  *<pre>
  public static void main(String[] args) {
     cmdLineArgs = new CmdLineArgs(args);
@@ -72,7 +85,8 @@ public class YAMLPath implements Serializable {
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by the default DELIMITER = "."</p>
-     *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "."
+     *  <p>Special case: <code>"**"</code> represents a deviation of java.util.regexp specs on what qualifies as a regular-expression.  This deviation is a very human-friendly easy-2-understand need.</p>
+     *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "." - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      */
     public YAMLPath(String _yp) {
         this(_yp, "\\.");
@@ -80,7 +94,7 @@ public class YAMLPath implements Serializable {
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by DELIMITER</p>
-     *  @param _yp example: "<code>paths.*.*.responses.200</code>"
+     *  @param _yp example: "<code>paths.*.*.responses.200</code>" - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _delim examples are "." or "\t"  or "," .. ..
      */
     public YAMLPath(String _yp, final String _delim) {
@@ -112,12 +126,16 @@ public class YAMLPath implements Serializable {
             String elem = this.yamlElemArr[ix];
             try {
                 //System.err.println(CLASSNAME+": checking on .. YAML-element '"+ elem +"'.");
-                if (elem.equals("*") ) {
-                    elem = ".*"; // convert human-friendly * into formal-regexp .*
-                    this.yamlElemArr[ix] = elem;
+                if (elem.equals("**") ) {
+                    // nothing to validate, as its NOT a valid Regular-expression.  Let "**" through!
+                }else {
+                    if (elem.equals("*") ) {
+                        elem = ".*"; // convert human-friendly * into formal-regexp .*
+                        this.yamlElemArr[ix] = elem;
+                    }
+                    //System.err.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
+                    Pattern p = Pattern.compile(elem);
                 }
-                //System.err.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
-                Pattern p = Pattern.compile(elem);
             }catch(PatternSyntaxException e){
                 System.err.println(CLASSNAME+": Invalid YAML-element '"+ elem +"' provided.");
                 System.err.println(e.getMessage());
@@ -198,10 +216,29 @@ public class YAMLPath implements Serializable {
                 retstr += this.yamlElemArr[ix] + this.prntDelimiter;
             return retstr;
         }else{
-            return null;
+            return null; // We've a problem if we're here
         }
     }
 
+    /** For example: strings like "<code>**.xml</code>", before your 1st call to next(), this function will return true.  After the 1st call to next(), this function will return "true".  After the 2nd call .., this will return false
+     *  @return whether the previous YAML-Element was "**" or Not.
+     */
+    public boolean hasWildcardPrefix() {
+        if ( ! this.isValid ) return false;
+        if ( this.indexPtr < this.yamlElemArr.length ) {
+            if ( this.indexPtr <= 0 ) {
+                return false; // We are the beginning of the YAML path.  So, SEMANTICALLY false!
+            } else {
+                if ( this.yamlElemArr[ this.indexPtr - 1 ].equals("**") )
+                    return true;
+                else
+                    return false;
+            }
+        }else{
+            return false; // We've a problem if we're here
+        }
+    }
+    
     /** For example strings like "<code>paths.*.*.responses.200</code>", before your 1st call to next(), this function will return "<code>paths.*.*.responses.200</code>".  After the 1st call to next(), this function will return "<code>*.*.responses.200</code>".  After the 3rd call to next(), this will return "<code>responses.200</code>".  After you call next() a 5th time(or more), this function will return null(String).
      *  @return a string that does NOT have periods/dots in it.  The string may be (based on example above) = "*".
      */
@@ -216,7 +253,7 @@ public class YAMLPath implements Serializable {
                 retstr += this.prntDelimiter + this.yamlElemArr[ix];
             return retstr;
         }else{
-            return null;
+            return null; // We've a problem if we're here
         }
     }
 

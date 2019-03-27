@@ -48,14 +48,11 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReplaceYamlEntry";
 
-    public final boolean verbose;
-
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
     public ReplaceYamlEntry(boolean _verbose) {
-        this.verbose = _verbose;
-//        keys2bRemoved = new LinkedHashMap<>();
+        super(_verbose);
     }
 
     protected final LinkedHashMap<Object,Map> keys2bRemoved = new LinkedHashMap<>();

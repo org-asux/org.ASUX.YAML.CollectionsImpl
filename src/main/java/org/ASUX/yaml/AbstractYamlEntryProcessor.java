@@ -168,9 +168,8 @@ public abstract class AbstractYamlEntryProcessor {
 
         //--------------------------
         final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
-        final Pattern yamlPElemPatt = Pattern.compile(yamlPathElemStr); // This should Not throw, per precautions in YAMLPath class
-        
-        boolean matchFound = false;
+
+        boolean aMatchFound = false;
 
         //--------------------------
         for (Object key : _map.keySet()) {
@@ -178,28 +177,52 @@ public abstract class AbstractYamlEntryProcessor {
             final Object rhs = _map.get(key);  // otherwise we'll inefficiently be doing map.get multiple times below.
             final String rhsStr = rhs.toString(); // to make verbose logging code simplified
 
-            if ( this.verbose ) System.out.println ( CLASSNAME +": "+ key +": "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
+            if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": "+ key +": "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
 
-            if ( yamlPElemPatt.matcher(key.toString()).matches() ) { // yaml-path-element matches the "key"
-                if ( this.verbose ) System.out.println(CLASSNAME + ": @# " + _yamlPath.index() +"\t"+ _yamlPath.getPrefix() +"\t"+ _yamlPath.get() +"\t"+ _yamlPath.getSuffix() + "\t  matched '"+ key +"':\t"+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) +"\t\t of type '"+rhs.getClass().getName() +"'");
+            //-----------------
+            boolean hasThisYamlLineMatched = false;
+            boolean hasThisYamlLineLiterallyMatched = ! yamlPathElemStr.equals("**");
+            if ( yamlPathElemStr.equals("**") ) {
+                hasThisYamlLineLiterallyMatched = false; // redundant
+                hasThisYamlLineMatched = true;
+            } else {
+                final Pattern yamlPElemPatt = java.util.regex.Pattern.compile(yamlPathElemStr); // This should Not throw, per precautions in YAMLPath class
+                hasThisYamlLineLiterallyMatched = yamlPElemPatt.matcher(key.toString()).matches();
+                hasThisYamlLineMatched = hasThisYamlLineLiterallyMatched;
+            }
+            // One more check: If current YamlLine's key did NOT match, but is there a "**" for a "greedy-match"
+            if ( ! hasThisYamlLineMatched && _yamlPath.hasWildcardPrefix() ) {
+                hasThisYamlLineMatched = true;
+                hasThisYamlLineLiterallyMatched = false;
+            }
+
+            if ( hasThisYamlLineMatched ) {
+                if ( this.verbose ) System.out.println(CLASSNAME + ": @# " + _yamlPath.index() +"\t"+ _yamlPath.getPrefix() +"\t"+ _yamlPath.get() +"\t"+ _yamlPath.getSuffix() + "\t matched("+ hasThisYamlLineLiterallyMatched+ ") '"+ key +"':\t"+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) +"\t\t of type '"+rhs.getClass().getName() +"'");
 
                 _end2EndPaths.add( key.toString() ); // _end2EndPaths keeps the breadcrumbs
 
                 //------------------------------------------------------
                 assert (_yamlPath.hasNext()); // why on earth would this assertion fail - see checks @ top of function.
+
                 final YAMLPath cloneOfYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
-                cloneOfYAMLPath.next();
+                if (  hasThisYamlLineLiterallyMatched ||  !  _yamlPath.hasWildcardPrefix() )
+                    cloneOfYAMLPath.next(); // _yamlPath.get() should continue to have "**" as previous element.
+
+                @SuppressWarnings("unchecked")
+                final LinkedList<String> cloneOfE2EPaths = (LinkedList<String>) _end2EndPaths.clone();
+
+                if ( this.verbose ) System.out.println(CLASSNAME + ": @ whether to recurse: deepcloned YamlPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +" -- cloneOfYP.hasNext()='"+ cloneOfYAMLPath.hasNext() +"'  _yamlPath.hasWildcardPrefix()='"+ _yamlPath.hasWildcardPrefix() +"'");
 
                 if ( ! cloneOfYAMLPath.hasNext() ) {
                     // NO more recursion feasible!
                     // well! we've matched end2end .. to a "Map" element (instead of String elem)!
 
                     // let sub-classes determine what to do here
-                    final boolean ret3 = onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
-                    if ( ! ret3 ) continue; // Pretend as if match failed.
+                    final boolean callbkRet3 = onEnd2EndMatch(_map, _yamlPath, key, null, cloneOfE2EPaths); // location #1 for end2end match
+                    if ( ! callbkRet3 ) continue; // Pretend as if match failed.
                     _end2EndPaths.removeLast();
 
-                    if ( this.verbose ) System.out.println(CLASSNAME +": deleting entry in YAML-file: "+ _yamlPath.getPrefix() +" "+ key  +":\t"+  rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) +"\t\t type '"+rhs.getClass().getName() +"'");
+                    if ( this.verbose ) System.out.println(CLASSNAME +": End2End Match#1 in YAML-file: "+ _yamlPath.getPrefix() +" "+ key  +":\t"+  rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) +"\t\t type '"+rhs.getClass().getName() +"'");
 
                     continue; // outermost for-loop (Object key : _map.keySet())
                 }
@@ -209,42 +232,52 @@ public abstract class AbstractYamlEntryProcessor {
                 // If we're here, it means INCOMPLETE match..
 
                 // let sub-classes determine what to do here
-                final boolean ret2 = onPartialMatch(_map, _yamlPath, key, _map, _end2EndPaths );
-                if ( ! ret2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
+                final boolean callbkRet2 = onPartialMatch(_map, _yamlPath, key, _map, _end2EndPaths );
+                if ( ! callbkRet2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
 
                 if ( this.verbose ) System.out.println(CLASSNAME + ": recursing with YAMLPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +": ... @ YAML-file-location: '"+ key +"': "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
-
-                @SuppressWarnings("unchecked") final LinkedList<String> cloneOfE2EPaths = (LinkedList<String>) _end2EndPaths.clone();
 
                 //--------------------------------------------------------
                 // if we are here, we've only a PARTIAL match.
                 // So.. we need to keep recursing (specifically for Map & ArrayList YAML elements)
                 if ( rhs instanceof Map ) {
 
-                    matchFound = this.recursiveSearch( (Map)rhs, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
+                    aMatchFound = this.recursiveSearch( (Map)rhs, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
 
                 } else if ( rhs instanceof java.util.ArrayList ) {
+
                     ArrayList arr = (ArrayList) rhs;
                     for ( Object o: arr ) {
                         // iterate over each element?  Need a new variant of this function - to match "index"
                         if ( o instanceof Map ) { // Shouldn't this always be true - per YAML spec?
-                            matchFound = this.recursiveSearch( (Map)o, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
-                        } else {
-                            System.err.println(CLASSNAME +": incomplete code: failure w Array-type '"+ rhs.getClass().getName() +"'");
+                            aMatchFound = this.recursiveSearch( (Map)o, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
+                        } else if ( o instanceof java.lang.String ) {
+                            // can't be a match, as it's Not even in the format   "rhs: lhs"
                             onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for failure-2-match
+                        } else {
+                            System.err.println(CLASSNAME +": incomplete code: failure w Array-type '"+ o.getClass().getName() +"'");
+                            onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #2 for failure-2-match
                         } // if-Else   o instanceof Map - (WITHIN FOR-LOOP)
                     } // for Object o: arr
+
                 } else if ( rhs instanceof java.lang.String ) {
-                    // yeah! We found a full end2end match!  No more recursion is feasible.
-                    // let sub-classes determine what to do here
-                    final boolean ret5 = onEnd2EndMatch(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for end2end match
-                    if ( ! ret5 ) continue; // Pretend as if match failed.
-                    _end2EndPaths.clear();
-                    matchFound = true;
-                    if ( this.verbose ) System.out.println(CLASSNAME +": deleting entry: "+ key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+                    if ( _yamlPath.hasNext() ) { // then it's Not an end2end match
+                        _end2EndPaths.removeLast();
+                        continue;
+                    } else {
+                        // yeah! We found a full end2end match!  Also, No more recursion is feasible.
+                        // let sub-classes determine what to do here
+                        final boolean callbkRet5 = onEnd2EndMatch(_map, _yamlPath, key, null, cloneOfE2EPaths); // location #2 for end2end match
+                        if ( this.verbose ) System.out.println(CLASSNAME +": callbkRet5="+callbkRet5+" End2End Match#2 @ YAML-File: "+ key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+                        if ( ! callbkRet5 ) continue; // Pretend as if match failed and continue to next peer YAML element.
+                        _end2EndPaths.clear();
+                        aMatchFound = true;
+                    }
+
                 } else {
                     System.err.println(CLASSNAME +": incomplete code: Unable to handle rhs of type '"+ rhs.getClass().getName() +"'");
-                    onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #2 for failure-2-match
+                    onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #3 for failure-2-match
+
                 } // if-else   rhs instanceof   Map/Array/String/.. ..
 
                 // As we've had AT-LEAST a PARTIAL-MATCH, in CURRENT-ITERATION (of FOR-LOOP).. ..
@@ -252,8 +285,8 @@ public abstract class AbstractYamlEntryProcessor {
                 if ( _end2EndPaths.size() > 0 )  _end2EndPaths.removeLast();
                 
             } else {
-                // Failure of yamlPElemPatt.matcher  -- -- i.e., to match YAML-Path pattern.
-                onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #3 for failure-2-match
+                // false == foundAMatch  -- -- i.e., FAILED to match YAML-Path pattern.
+                onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #4 for failure-2-match
                 
             }// if-else yamlPElemPatt.matcher()
 
@@ -262,7 +295,7 @@ public abstract class AbstractYamlEntryProcessor {
         // Now that we looped thru all keys at current recursion level..
         // .. for now nothing to do here.
 
-        return matchFound;
+        return aMatchFound;
     } // function
 
 }

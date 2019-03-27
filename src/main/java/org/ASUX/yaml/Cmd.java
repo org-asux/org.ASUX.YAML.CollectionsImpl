@@ -32,12 +32,6 @@
 
 package org.ASUX.yaml;
 
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-
 //import java.util.Map;
 //import java.util.LinkedList;
 //import java.util.ArrayList;
@@ -85,14 +79,29 @@ public class Cmd {
         try{
             cmdLineArgs = new CmdLineArgs(args);
 
+            //-----------------------
+            // read input, whether it's System.in -or- an actual input-file
             if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to load file: " + cmdLineArgs.inputFilePath );
-            InputStream is = new FileInputStream(cmdLineArgs.inputFilePath);
-            Reader reader = new InputStreamReader(is);
+            final java.io.InputStream is = (cmdLineArgs.inputFilePath.equals("-")) ? System.in : new java.io.FileInputStream(cmdLineArgs.inputFilePath);
+            final java.io.Reader reader = new java.io.InputStreamReader(is);
 
             //-----------------------
-            LinkedHashMap data = new com.esotericsoftware.yamlbeans.YamlReader(reader).read(LinkedHashMap.class);
-            
+            // prepare for output: whether it goes to System.out -or- to an actual output-file.
+            final com.esotericsoftware.yamlbeans.YamlWriter writer = (cmdLineArgs.outputFilePath.equals("-")) ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.OutputStreamWriter(System.out) ) : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
+
+            // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
+            writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
+//                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
+//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+
             //-----------------------
+            // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file contents into a java.util.Map
+            final LinkedHashMap data = new com.esotericsoftware.yamlbeans.YamlReader(reader).read(LinkedHashMap.class);
+
+            //-----------------------
+            // run the command requested by user
             if ( cmdLineArgs.isReadCmd ) {
                 ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose );
                 readcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
@@ -100,30 +109,21 @@ public class Cmd {
                 ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose );
                 listcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
             } else if ( cmdLineArgs.isDelCmd ) {
-                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to load file.");
-
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start DELETE command");
                 DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose );
                 delcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
-
-                com.esotericsoftware.yamlbeans.YamlWriter writer = new com.esotericsoftware.yamlbeans.YamlWriter( new FileWriter(cmdLineArgs.outputFilePath) );
-                // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
-                writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
-//                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
-                writer.write(data);
-                writer.close();
+                writer.write(data); // The contents of java.util.Map has some YAML rows removed. so, dump it.
             } else if ( cmdLineArgs.isReplaceCmd ) {
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start CHANGE/REPLACE command");
                 ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose );
                 replcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
-
-                com.esotericsoftware.yamlbeans.YamlWriter writer = new com.esotericsoftware.yamlbeans.YamlWriter( new FileWriter(cmdLineArgs.outputFilePath) );
-                writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
-//                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
+                writer.write(data); // The contents of java.util.Map has been updated with replacement strings. so, dump it.
             } else {
                 System.err.println("Unimplemented command: "+cmdLineArgs.toString() );
             }
+
+            // cleanup
+            if ( ! cmdLineArgs.outputFilePath.equals("-") ) writer.close();
 
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             System.err.println(e.getMessage());

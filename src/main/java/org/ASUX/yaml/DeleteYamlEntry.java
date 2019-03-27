@@ -34,7 +34,6 @@ package org.ASUX.yaml;
 
 import java.util.Map;
 import java.util.LinkedList;
-import java.util.LinkedHashMap;
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -48,18 +47,24 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.DeleteYamlEntry";
 
-    public final boolean verbose;
+    public class Tuple<X, Y> {
+        public final X key;
+        public final Y map;
+        public Tuple(X _k, Y _m) {
+            this.key = _k;
+            this.map = _m;
+        }
+    }
 
+    protected final LinkedList<Tuple<Object,Map> > keys2bRemoved = new LinkedList<>();
+    
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
     public DeleteYamlEntry(boolean _verbose) {
-        this.verbose = _verbose;
-//        keys2bRemoved = new LinkedHashMap<>();
+        super(_verbose);
     }
 
-    protected final LinkedHashMap<Object,Map> keys2bRemoved = new LinkedHashMap<>();
-    
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     
@@ -83,7 +88,8 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
 //        }
-        this.keys2bRemoved.put( _key, _parentMap );
+        this.keys2bRemoved.add( new Tuple<>(_key, _map) );
+//        if ( this.verbose ) System.out.println("onEnd2EndMatch: count=" + this.keys2bRemoved.size() );
         return true;
     }
 
@@ -105,8 +111,14 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final Map _map, final YAMLPath _yamlPath) {
 
-        if ( this.verbose ) System.out.println("atEndOfInput: count=" + this.keys2bRemoved.size() );
-        this.keys2bRemoved.forEach((k, parentMap) -> { parentMap.remove(k); });
+        System.out.println("atEndOfInput: count=" + this.keys2bRemoved.size() );
+        for (Tuple<Object,Map> tpl: this.keys2bRemoved ) {
+            final String rhsStr = tpl.map.toString();
+            if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+            tpl.map.remove(tpl.key);
+        }
+        // java's forEach never works if you are altering anything within the Lambda body
+        // this.keys2bRemoved.forEach( tpl -> {tpl.map.remove(tpl.key); });
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

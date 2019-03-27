@@ -57,7 +57,7 @@ public class CmdLineArgs {
     public String yamlPathStr = "*";
     public String inputFilePath = "/tmp/i";
     public String outputFilePath = "/tmp/o";
-    public com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
+//    public com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** Constructor.
@@ -129,10 +129,10 @@ public class CmdLineArgs {
             this.inputFilePath = cmd.getOptionValue("inputfile");
             this.outputFilePath = cmd.getOptionValue("outputfile");
 
-            this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE; // default behavior
-            if ( cmd.hasOption( noQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE;
-            if ( cmd.hasOption( singleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
-            if ( cmd.hasOption( doubleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE;
+//            this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE; // default behavior
+//            if ( cmd.hasOption( noQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE;
+//            if ( cmd.hasOption( singleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
+//            if ( cmd.hasOption( doubleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE;
             //System.err.println("this.quoteType = "+this.quoteType.toString());
 
         } catch (ParseException e) {
@@ -146,10 +146,12 @@ public class CmdLineArgs {
     /** For making it easy to have simple code generate debugging-output, added this toString() method to this class.
      */
     public String toString() {
-        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" quoting="+quoteType.toString();
+//        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" quoting="+quoteType.toString();
+        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath;
     }
     
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // For unit-testing purposes only
 //    public static void main(String[] args) {
 //        new CmdLineArgs(args);
 //    }

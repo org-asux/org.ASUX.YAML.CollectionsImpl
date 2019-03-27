@@ -48,14 +48,13 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReadYamlEntry";
 
-    public final boolean verbose;
     public int count = 0;
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
     public ReadYamlEntry(boolean _verbose) {
-        this.verbose = _verbose;
+        super(_verbose);
         this.count = 0;
     }
 
