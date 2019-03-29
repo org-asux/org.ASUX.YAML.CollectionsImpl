@@ -47,6 +47,9 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.DeleteYamlEntry";
 
+    protected final LinkedList<Tuple<Object,Map> > keys2bRemoved = new LinkedList<>();
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     public class Tuple<X, Y> {
         public final X key;
         public final Y map;
@@ -56,8 +59,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
         }
     }
 
-    protected final LinkedList<Tuple<Object,Map> > keys2bRemoved = new LinkedList<>();
-    
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
@@ -83,13 +85,13 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-//        if ( this.verbose ) {
-            System.out.print("onEnd2EndMatch: _end2EndPaths =");
-            _end2EndPaths.forEach( s -> System.out.print(s+", ") );
-            System.out.println("");
-//        }
+//      if ( this.verbose ) {
+//          System.out.print("onEnd2EndMatch: _end2EndPaths =");
+        _end2EndPaths.forEach( s -> System.out.print(s+", ") );
+        System.out.println("");
+//      }
         this.keys2bRemoved.add( new Tuple<>(_key, _map) );
-//        if ( this.verbose ) System.out.println("onEnd2EndMatch: count=" + this.keys2bRemoved.size() );
+//      if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
 
@@ -111,7 +113,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final Map _map, final YAMLPath _yamlPath) {
 
-        System.out.println("atEndOfInput: count=" + this.keys2bRemoved.size() );
+        System.out.println("count=" + this.keys2bRemoved.size() );
         for (Tuple<Object,Map> tpl: this.keys2bRemoved ) {
             final String rhsStr = tpl.map.toString();
             if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
