@@ -193,7 +193,10 @@
                 </executions>
             </plugin>
 
-            <!-- The Maven GPG plugin is used to sign the components with the following configuration. -->
+            <!-- The Maven GPG plugin is used to sign the components with the following configuration.
+             * See https://blog.sonatype.com/2010/01/how-to-generate-pgp-signatures-with-maven/
+             *      $ mvn clean deploy -Dgpg.keyname=D99F0F81840303DE293F4796067DA2CF1C7ADC98  -Dgpg.passphrase='Top-Scret$Pass#Phrase'
+             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
@@ -325,8 +328,8 @@
 								<phase>verify</phase>
 								<configuration>
 									<serverId>${gpg.serverId}</serverId>
-									<usernameOut>067DA2CF1C7ADC98</usernameOut> <!-- gpg.keyname -->
-									<passwordOut>B1sb5oD/ypX918rYdCP4z/q0l+O9HLw0cg==</passwordOut> <!-- gpg.passphrase -->
+									<usernameOut>${gpg.keyname}</usernameOut>
+									<passwordOut>${gpg.passphrase}</passwordOut>
 								</configuration>
 							</execution>
 						</executions>
