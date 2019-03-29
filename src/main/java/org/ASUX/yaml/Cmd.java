@@ -82,8 +82,8 @@ public class Cmd {
             //-----------------------
             // read input, whether it's System.in -or- an actual input-file
             if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to load file: " + cmdLineArgs.inputFilePath );
-            final java.io.InputStream is = (cmdLineArgs.inputFilePath.equals("-")) ? System.in : new java.io.FileInputStream(cmdLineArgs.inputFilePath);
-            final java.io.Reader reader = new java.io.InputStreamReader(is);
+            final java.io.InputStream is1 = (cmdLineArgs.inputFilePath.equals("-")) ? System.in : new java.io.FileInputStream(cmdLineArgs.inputFilePath);
+            final java.io.Reader reader1 = new java.io.InputStreamReader(is1);
 
             //-----------------------
             // prepare for output: whether it goes to System.out -or- to an actual output-file.
@@ -98,7 +98,7 @@ public class Cmd {
 
             //-----------------------
             // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file contents into a java.util.Map
-            final LinkedHashMap data = new com.esotericsoftware.yamlbeans.YamlReader(reader).read(LinkedHashMap.class);
+            final LinkedHashMap data = new com.esotericsoftware.yamlbeans.YamlReader(reader1).read(LinkedHashMap.class);
 
             //-----------------------
             // run the command requested by user
@@ -114,8 +114,28 @@ public class Cmd {
                 delcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
                 writer.write(data); // The contents of java.util.Map has some YAML rows removed. so, dump it.
             } else if ( cmdLineArgs.isReplaceCmd ) {
-                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start CHANGE/REPLACE command");
-                ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose );
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": loading @Replace-file: " + cmdLineArgs.replaceFilePath );
+                Object o = null;
+                if ( ! cmdLineArgs.replaceFilePath.startsWith("@") ) {
+                    // user provided a SIMPLE String as the RHS-replacement value
+                    o = cmdLineArgs.replaceFilePath;
+                } else {
+                    // user provided a FILE for replacement-content (instead of a simple-string)
+                    try {
+                        final java.io.InputStream is2 = new java.io.FileInputStream(cmdLineArgs.replaceFilePath.substring(1) ); //remove '@' as the 1st character in the user's input
+                        final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+                        // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file contents into a java.util.Map
+                        final LinkedHashMap replDataMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+                        if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": Loaded REPLACEMENT-contents" );
+                        o = replDataMap;
+                    } catch (java.io.IOException e) {
+                        e.printStackTrace(System.err);
+                        System.err.println("trouble with REPLACEMENT-File: '" + cmdLineArgs.replaceFilePath.substring(1) +"'.");
+                        System.exit(11);
+                    }
+                } // if-else startsWith"@"
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start CHANGE/REPLACE command " +o.toString() );
+                ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose, o );
                 replcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
                 writer.write(data); // The contents of java.util.Map has been updated with replacement strings. so, dump it.
             } else {
@@ -126,17 +146,21 @@ public class Cmd {
             if ( ! cmdLineArgs.outputFilePath.equals("-") ) writer.close();
 
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
-            System.err.println(e.getMessage());
+            e.printStackTrace(System.err);
             System.err.println("Internal error: unable to process YAML");
             System.exit(9);
         } catch (java.io.FileNotFoundException e) {
-            System.err.println(e.getMessage());
+            e.printStackTrace(System.err);
             System.err.println("INPUT-File Not found: '" + cmdLineArgs.inputFilePath +"'.");
-            System.exit(3);
+            System.exit(8);
         } catch (java.io.IOException e) {
-            System.err.println(e.getMessage());
+            e.printStackTrace(System.err);
             System.err.println("OUTPUT-File Not found: '" + cmdLineArgs.outputFilePath +"'.");
-            System.exit(3);
+            System.exit(7);
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+            System.err.println("Internal error: '" + cmdLineArgs.outputFilePath +"'.");
+            System.exit(6);
         }
         
     }
