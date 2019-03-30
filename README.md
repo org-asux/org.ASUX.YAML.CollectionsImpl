@@ -59,7 +59,7 @@ Note: the hyphen/"-" for output-file cmdline-line argument means: write to conso
 <p>Note: see section above for "<em>Read/Query YAML files</em>" - for help with command-line options.</p>
 <p>Example #2: Alternate way to do it, using the very simple <a href="https://github.com/org-asux/org.ASUX">org.ASUX</a> cmd-line based project:</p>
 <p><code>$ asux yaml --replace <b>@/path/to/file/repltxt.yaml</b> --yamlpath 'paths.*.(get|put|post).responses.200' -i ~/Documents/myinput.yaml -o new.yaml</code></p>
-<p><b>ATTENTION<b>: Did you notice the <code>@</code> as the <b>1st-character</b> in the value of the cmd-line argument=<code>--replace</code>, in the line above?  Are you able to tell the difference vs. the 1st example above?</p>
+<p><b>ATTENTION</b>: Did you notice the <code>@</code> as the <b>1st-character</b> in the value of the cmd-line argument=<code>--replace</code>, in the line above?  Are you able to tell the difference vs. the 1st example above?</p>
 <p>The file <code>$cwd/repltxt.yaml</code> should be a valid yaml.  That's is the ONLY requirement</p>
 
 
