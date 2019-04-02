@@ -113,7 +113,7 @@ public class YAMLPath implements Serializable {
 
         // System.out.println(CLASSNAME + ": Sanity check completed.");
         //        boolean b = Pattern.matches("a*b", "aaaaab");
-        _yp.strip(); // strip leading and trailing whitesapce
+        _yp.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
         if ( _yp.length() <= 0 ) return; // invalid YAML Path.  Let "this.isValid" stay as false
 
         // System.out.println(CLASSNAME + ": about to split '"+_yp+"' with delimiter '"+_delim+"'");
