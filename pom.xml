@@ -59,7 +59,7 @@
         <dependency>
             <groupId>com.esotericsoftware.yamlbeans</groupId>
             <artifactId>yamlbeans</artifactId>
-            <version>9.99</version>
+            <version>1.13</version>
             <!-- version>1.13</version -->
         </dependency>
 	</dependencies>
