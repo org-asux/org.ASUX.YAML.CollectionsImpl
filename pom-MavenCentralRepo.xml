@@ -19,7 +19,7 @@
         <TARGETDIR>${TARGETROOT}/${project.groupId}-${project.artifactId}-${project.version}</TARGETDIR>
         <!-- default encoding -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>11</java.version>
+        <java.version>8</java.version>
         <!-- see http://stackoverflow.com/questions/3017695/how-to-configure-encoding-in-maven -->
         <!-- see http://maven.apache.org/general.html#encoding-warning -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -99,9 +99,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.0</version> <!-- http://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
 				<configuration>
-                    <release>11</release>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>8</source>
+                    <target>8</target>
                     <compilerArgs>
                         <arg>-Xlint:deprecation</arg>
                         <arg>-Xlint:unchecked</arg>
