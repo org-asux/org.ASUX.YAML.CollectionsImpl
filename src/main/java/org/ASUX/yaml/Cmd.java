@@ -42,11 +42,11 @@ import java.util.LinkedHashMap;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-/** <p>This class is the "wrapper-processor" for the various "YAML-commands" while traverse a YAML file.</p>
- *  <p>The 4 YAML-COMMANDS are: read/query, list, delete and replace.</p>
- *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
- *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
- *  <p>See full details of how to use this in this GitHub project's wiki - or - in <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project and its wiki.</p>
+/**
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This class is the "wrapper-processor" for the various "YAML-commands" (which traverse a YAML file to do what you want).</p>
+ *  <p>The 4 YAML-COMMANDS are: <b>read/query, list, delete</b> and <b>replace</b>.</p>
+ *  <p>See full details of how to use these commands - in this GitHub project's wiki - or - in <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project and its wiki.</p>
  *
  *  <p>Example: <code>java org.ASUX.yaml.Cmd --delete --yamlpath "paths.*.*.responses.200" -i $cwd/src/test/my-petstore-micro.yaml -o /tmp/output2.yaml  --double-quote</code><br>
  *  Example: <b><code>java org.ASUX.yaml.Cmd</code></b> will show all command line options supported.</p>
@@ -62,8 +62,14 @@ public class Cmd {
 
     public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.Cmd";
 
+    /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
+     *  <p>It's read-only (final data-attribute).</p>
+     */
     public final boolean verbose;
 
+    /** <p>The only constructor - public/private/protected</p>
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     */
     public Cmd(boolean _verbose) {
         this.verbose = _verbose;
     }
