@@ -89,7 +89,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     
     /** This function will be called when a partial match of a YAML path-expression happens.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
+     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch}
      */
     protected boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
@@ -99,7 +99,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
+     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
     protected boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
@@ -115,7 +115,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called whenever the YAML path-expression fails to match.
-     * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail()
+     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail}
      */
     protected void onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
