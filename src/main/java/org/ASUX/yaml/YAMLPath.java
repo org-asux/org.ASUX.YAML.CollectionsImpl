@@ -81,7 +81,7 @@ public class YAMLPath implements Serializable {
     public final String prntDelimiter;
     public String[] yamlElemArr = new String[]{"UNinitialized", "yamlElemArr"};
 
-    private int indexPtr = -1;
+    protected int indexPtr = -1;
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by the default DELIMITER = "."</p>
@@ -107,7 +107,7 @@ public class YAMLPath implements Serializable {
             Pattern p = Pattern.compile(_delim);
         }catch(PatternSyntaxException e){
             System.err.println("Invalid delimiter-pattern '"+ _delim +"' provided to constructor of "+CLASSNAME);
-            System.err.println(e.getMessage());
+            e.printStackTrace(System.err);
             return; // invalid YAML Path.  Let "this.isValid" stay as false
         }
 
@@ -138,7 +138,7 @@ public class YAMLPath implements Serializable {
                 }
             }catch(PatternSyntaxException e){
                 System.err.println(CLASSNAME+": Invalid YAML-element '"+ elem +"' provided.");
-                System.err.println(e.getMessage());
+                e.printStackTrace(System.err);
                 return; // invalid YAML Path.  Let "this.isValid" stay as false
             }
         }
@@ -167,17 +167,19 @@ public class YAMLPath implements Serializable {
             return false;
     }
 
-    /** For example strings like "<code>paths.*.*.responses.200</code>", your <b>1st 5 invocations</b> will return a valid string (exact same values as 1st 5 invocations of get()).  After you call it a 6th time (for same example), this function will return null(String).
-     *  @return String a string that does NOT have periods/dots in it.  The string may be (based on example above) = "*".
+    /** For example strings like "<code>paths.*.*.responses.200</code>", your <b>1st 5 invocations</b> will make this object point to valid Path-Elements (call {@link #get} to get those valid Path-Element-strings.  After you call <code>next()</code> a 6th time (for same example), this object will point to null(String) and from then onwards, {@link #get} will return null.
      */
-    public String next() {
-        if ( ! this.isValid ) return null;
-        String retstr = null;
-        if ( this.indexPtr < this.yamlElemArr.length ) {
-            retstr = this.yamlElemArr[this.indexPtr];
+    public void next() {
+//        String retstr = null;
+//        if ( this.hasNext() ) {
+//            retstr = this.yamlElemArr[this.indexPtr];
+//            this.indexPtr ++;
+//        }
+//        return retstr;
+        if ( this.hasNext() ) {
             this.indexPtr ++;
         }
-        return retstr;
+        return;
     }
 
     /** For example strings like "<code>paths.*.*.responses.200</code>", after your first call to next(), this will return "paths".  For the 2nd call to next(), this function will return "*".  After you call next() a 5th time(or more), this function will return null(String).
