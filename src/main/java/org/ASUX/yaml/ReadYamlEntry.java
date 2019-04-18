@@ -66,7 +66,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onPartialMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+        // Do Nothing for "read YAML-entry command"
         return true;
     }
 
@@ -77,9 +77,10 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     protected boolean onEnd2EndMatch(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
         this.count ++;
-//        System.out.print("onEnd2EndMatch: _end2EndPaths =");
-//        _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
-        System.out.println(_parentMap.get(_key).toString());
+        // System.out.print("onEnd2EndMatch: _end2EndPaths =");
+        // end2EndPaths.forEach( s -> System.out.print(s+"\t") );
+        // System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _map.get(_key) = ["+ _map.get(_key) +"]");
+        System.out.println( (_map.get(_key) == null) ? "null" : _map.get(_key).toString() );
 
         return true;
     }
@@ -90,7 +91,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void onMatchFail(final Map _map, final YAMLPath _yamlPath, final Object _key, final Map _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+            // Do Nothing for "read YAML-entry command"
     }
 
     //-------------------------------------
