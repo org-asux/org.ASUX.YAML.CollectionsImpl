@@ -232,7 +232,7 @@ public abstract class AbstractYamlEntryProcessor {
                 // If we're here, it means INCOMPLETE match..
 
                 // let sub-classes determine what to do here
-                final boolean callbkRet2 = onPartialMatch(_map, _yamlPath, key, _map, _end2EndPaths );
+                final boolean callbkRet2 = onPartialMatch(_map, _yamlPath, key, null, _end2EndPaths );
                 if ( ! callbkRet2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
 
                 if ( this.verbose ) System.out.println(CLASSNAME + ": recursing with YAMLPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +": ... @ YAML-file-location: '"+ key +"': "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
@@ -253,10 +253,10 @@ public abstract class AbstractYamlEntryProcessor {
                             aMatchFound = this.recursiveSearch( (Map)o, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
                         } else if ( o instanceof java.lang.String ) {
                             // can't be a match, as it's Not even in the format   "rhs: lhs"
-                            onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #1 for failure-2-match
+                            onMatchFail(_map, _yamlPath, key, null, _end2EndPaths); // location #1 for failure-2-match
                         } else {
                             System.err.println(CLASSNAME +": incomplete code: failure w Array-type '"+ o.getClass().getName() +"'");
-                            onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #2 for failure-2-match
+                            onMatchFail(_map, _yamlPath, key, null, _end2EndPaths); // location #2 for failure-2-match
                         } // if-Else   o instanceof Map - (WITHIN FOR-LOOP)
                     } // for Object o: arr
 
@@ -276,7 +276,7 @@ public abstract class AbstractYamlEntryProcessor {
 
                 } else {
                     System.err.println(CLASSNAME +": incomplete code: Unable to handle rhs of type '"+ rhs.getClass().getName() +"'");
-                    onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #3 for failure-2-match
+                    onMatchFail(_map, _yamlPath, key, null, _end2EndPaths); // location #3 for failure-2-match
 
                 } // if-else   rhs instanceof   Map/Array/String/.. ..
 
@@ -286,7 +286,7 @@ public abstract class AbstractYamlEntryProcessor {
                 
             } else {
                 // false == foundAMatch  -- -- i.e., FAILED to match YAML-Path pattern.
-                onMatchFail(_map, _yamlPath, key, _map, _end2EndPaths); // location #4 for failure-2-match
+                onMatchFail(_map, _yamlPath, key, null, _end2EndPaths); // location #4 for failure-2-match
                 
             }// if-else yamlPElemPatt.matcher()
 
