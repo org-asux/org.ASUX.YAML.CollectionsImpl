@@ -52,21 +52,28 @@ public class CmdLineArgs {
     private static final String READCMD = "read";
     private static final String LISTCMD = "list";
     private static final String DELETECMD = "delete";
-    private static final char REPLACECMDCHAR = 'c';
+    private static final String MACROCMD = "macro";
     private static final String REPLACECMD = "replace";
+    // private static final char REPLACECMDCHAR = 'c'; // -c === --replace
+
     private static final String INPUTFILE = "inputfile";
     private static final String OUTPUTFILE = "outputfile";
+    private static final String YAMLPATH = "yamlpath";
+    // private static final String PROPERTIES = "properties";
 
     public boolean verbose = false;
     public boolean isReadCmd = true;
     public boolean isListCmd = false;
     public boolean isDelCmd = false;
+    public boolean isMacroCmd = false;
     public boolean isReplaceCmd = false;
     public String yamlPathStr = "*";
     public String inputFilePath = "/tmp/i";
     public String outputFilePath = "/tmp/o";
-    public String replaceFilePath = "/tmp/r";
-//    public com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
+    public String replaceFilePath = null;       // optional argument
+    public String propertiesFilePath = null;    // optional argument
+
+    // public com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** Constructor.
@@ -85,12 +92,17 @@ public class CmdLineArgs {
         Option readCmdOpt = new Option("r", READCMD, false, "output all elements that match");
         Option listCmdOpt = new Option("l", LISTCMD, false, "List YAML-Keys of all elements that match");
         Option delCmdOpt = new Option("d", DELETECMD, false, "Delete all elements that match");
-        Option replCmdOpt = new Option(""+REPLACECMDCHAR, REPLACECMD, true, "change/replace all elements that match with json-string provided on cmdline");
+        Option macroCmdOpt = new Option("m", MACROCMD, false, "run input YAML file thru a MACRO processor searching for ${ASUX::__} and replacing __ with values from Properties file");
+            replCmdOpt.setOptionalArg(false);
+            replCmdOpt.setArgs(1);
+            replCmdOpt.setArgName("propertiesFile");
+        Option replCmdOpt = new Option("c", REPLACECMD, true, "change/replace all elements that match with json-string provided on cmdline");
             replCmdOpt.setOptionalArg(false);
             replCmdOpt.setArgs(1);
             replCmdOpt.setArgName("new");
         grp.addOption(readCmdOpt);
         grp.addOption(delCmdOpt);
+        grp.addOption(macroCmdOpt);
         grp.addOption(listCmdOpt);
         grp.addOption(replCmdOpt);
         grp.setRequired(true);
@@ -110,9 +122,13 @@ public class CmdLineArgs {
         options.addOptionGroup(grp2);
 
         //----------------------------------
-        opt = new Option("p", "yamlpath", true, "Path to YAML element");
+        opt = new Option("p", YAMLPATH, true, "Path to YAML element");
         opt.setRequired(true);
         options.addOption(opt);
+
+        // opt = new Option("pr", PROPERTIES, true, "File containing properties for ${ASUX::key}");
+        // opt.setRequired(false);
+        // options.addOption(opt);
 
         opt = new Option("i", INPUTFILE, true, "input file path");
         opt.setRequired(true);
@@ -133,11 +149,15 @@ public class CmdLineArgs {
             this.isReadCmd = cmd.hasOption(READCMD);
             this.isListCmd = cmd.hasOption(LISTCMD);
             this.isDelCmd = cmd.hasOption(DELETECMD);
+            this.isMacroCmd = cmd.hasOption(MACROCMD);
             this.isReplaceCmd = cmd.hasOption(REPLACECMD);
-            this.yamlPathStr = cmd.getOptionValue("yamlpath");
+
+            this.yamlPathStr = cmd.getOptionValue(YAMLPATH);
             this.inputFilePath = cmd.getOptionValue(INPUTFILE);
+            // following two are optional arguments.
             this.outputFilePath = cmd.getOptionValue(OUTPUTFILE);
             this.replaceFilePath = cmd.getOptionValue(REPLACECMD);
+            this.propertiesFilePath = cmd.getOptionValue(MACROCMD);
 
 //            this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE; // default behavior
 //            if ( cmd.hasOption( noQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE;
@@ -156,8 +176,7 @@ public class CmdLineArgs {
     /** For making it easy to have simple code generate debugging-output, added this toString() method to this class.
      */
     public String toString() {
-//        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" quoting="+quoteType.toString();
-        return "verbose="+verbose+" read="+isReadCmd+" delete="+isDelCmd+" list="+isListCmd+"  change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" replaceFile="+replaceFilePath;
+        return "verbose="+verbose+" read="+isReadCmd+" list="+isListCmd+"  delete="+isDelCmd+" macro="+isMacroCmd+" change="+isReplaceCmd+" yamlPathStr="+yamlPathStr+" inpfile="+inputFilePath+" outputfile="+outputFilePath+" replaceFile="+replaceFilePath;
     }
     
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
