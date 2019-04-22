@@ -93,9 +93,9 @@ public class CmdLineArgs {
         Option listCmdOpt = new Option("l", LISTCMD, false, "List YAML-Keys of all elements that match");
         Option delCmdOpt = new Option("d", DELETECMD, false, "Delete all elements that match");
         Option macroCmdOpt = new Option("m", MACROCMD, false, "run input YAML file thru a MACRO processor searching for ${ASUX::__} and replacing __ with values from Properties file");
-            replCmdOpt.setOptionalArg(false);
-            replCmdOpt.setArgs(1);
-            replCmdOpt.setArgName("propertiesFile");
+            macroCmdOpt.setOptionalArg(false);
+            macroCmdOpt.setArgs(1);
+            macroCmdOpt.setArgName("propertiesFile");
         Option replCmdOpt = new Option("c", REPLACECMD, true, "change/replace all elements that match with json-string provided on cmdline");
             replCmdOpt.setOptionalArg(false);
             replCmdOpt.setArgs(1);
