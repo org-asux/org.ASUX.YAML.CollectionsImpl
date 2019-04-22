@@ -134,7 +134,7 @@ public class YAMLPath implements Serializable {
                         this.yamlElemArr[ix] = elem;
                     }
                     //System.err.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
-                    Pattern p = Pattern.compile(elem);
+                    const Pattern p = Pattern.compile(elem); // not using this, but if 'elem' is invalid, exception thrown
                 }
             }catch(PatternSyntaxException e){
                 System.err.println(CLASSNAME+": Invalid YAML-element '"+ elem +"' provided.");
