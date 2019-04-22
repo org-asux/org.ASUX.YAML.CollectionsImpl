@@ -33,6 +33,7 @@
 package org.ASUX.yaml;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -73,7 +74,7 @@ public class YamlMacroProcessor {
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p>Note: this function expects you to pass in a 'new java.utils.Map()' as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _inpMap and _outMap will be identical when function returns</p>
-     *  @param _inpMap A java.utils.Map (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _inpMap A java.utils.LinkedHashMap (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
      *  @param _outpMap Pass in a new 'empty' java.util.Map().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
@@ -81,7 +82,7 @@ public class YamlMacroProcessor {
      */
     public boolean recursiveSearch(
             final Map _inpMap,
-			final LinkedHashMap _outpMap,
+			final LinkedHashMap<Object,Object> _outpMap,
 			final Properties _props
     ) throws com.esotericsoftware.yamlbeans.YamlException {
 
@@ -90,13 +91,13 @@ public class YamlMacroProcessor {
         boolean bChangesMade = false;
 
         //--------------------------
-        for (Object keyAsIs : _map.keySet()) {
+        for (Object keyAsIs : _inpMap.keySet()) {
 
-            final String key = checkForMacros( keyAsIs, _props );
+            final String key = checkForMacros( keyAsIs.toString(), _props );
             assert( key != null );
 
-            // Note: the lookup within _map .. uses keyAsIs.  Not key.
-            final Object rhs = _map.get(keyAsIs);  // otherwise we'll inefficiently be doing map.get multiple times below.
+            // Note: the lookup within _inpMap .. uses keyAsIs.  Not key.
+            final Object rhs = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
             final String rhsStr = rhs.toString(); // to make verbose logging code simplified
 
             if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
@@ -105,20 +106,20 @@ public class YamlMacroProcessor {
 			// So.. we need to keep recursing (specifically for Map & ArrayList YAML elements)
 			if ( rhs instanceof Map ) {
 
-				final newMap1 = new LinkedHashMap();
+				final LinkedHashMap<Object,Object> newMap1 = new LinkedHashMap<>();
 				bChangesMade = this.recursiveSearch( (Map)rhs, newMap1, _props ); // recursion call
-				_outpMap.add( key, newMap1 );
+				_outpMap.put( key, newMap1 );
 
 			} else if ( rhs instanceof java.util.ArrayList ) {
 
 				final ArrayList arr = (ArrayList) rhs;
-				final ArrayList newarr = new ArrayList();
+				final ArrayList<Object> newarr = new ArrayList<>();
 
 				// Loop thru the 'arr' Array
 				for ( Object o: arr ) {
 					// iterate over each element
 					if ( o instanceof Map ) {
-						final newMap2 = new Map();
+						final LinkedHashMap<Object,Object> newMap2 = new LinkedHashMap<>();
 						bChangesMade = this.recursiveSearch( (Map)rhs, newMap2, _props ); // recursion call
 						newarr.add( newMap2 );
 					} else if ( o instanceof java.lang.String ) {
@@ -130,18 +131,18 @@ public class YamlMacroProcessor {
 					} // if-Else   o instanceof Map - (WITHIN FOR-LOOP)
 				} // for Object o: arr
 
-				_outpMap.add( key, newarr );
+				_outpMap.put( key, newarr );
 
 			} else if ( rhs instanceof java.lang.String ) {
 				// by rhs.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-				_outpMap.add( key, checkForMacros( rhs.toString(), _props)   );
+				_outpMap.put( key, checkForMacros( rhs.toString(), _props)   );
 
             } else {
 				System.err.println(CLASSNAME +": incomplete code #2: failure w Type '"+ rhs.getClass().getName() +"'");
 				System.exit(93); // This is a serious failure. Shouldn't be happening.
             }// if-else yamlPElemPatt.matcher()
 
-        } // for loop   key: _map.keySet()
+        } // for loop   key: _inpMap.keySet()
 
         // Now that we looped thru all keys at current recursion level..
         // .. for now nothing to do here.
@@ -178,7 +179,7 @@ public class YamlMacroProcessor {
 					retstr += _s.substring( prevIndex );
 				return retstr;
 			} else {
-				System.out.println("No match found.");
+				// System.out.println("No match found.");
 				return _s;
 			}
 
