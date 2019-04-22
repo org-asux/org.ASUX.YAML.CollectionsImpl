@@ -10,7 +10,7 @@ paths:
       consumes:
       - application/json
       responses:
-        "200":
-          description: successful operation
+        "${ASUX::Key202}":
+          description: ${ASUX::Key101}
           schema:
-            $ref: '#/definitions/AnyJSON'
+            $ref: ${ASUX::Key202}
