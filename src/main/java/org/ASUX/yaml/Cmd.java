@@ -36,6 +36,7 @@ package org.ASUX.yaml;
 //import java.util.LinkedList;
 //import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Properties;
 
 //import java.util.regex.*;
 
@@ -111,39 +112,55 @@ public class Cmd {
             if ( cmdLineArgs.isReadCmd ) {
                 ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose );
                 readcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+
             } else if ( cmdLineArgs.isListCmd ) {
                 ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose );
                 listcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
+
             } else if ( cmdLineArgs.isDelCmd ) {
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start DELETE command");
                 DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose );
                 delcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
                 writer.write(data); // The contents of java.util.Map has some YAML rows removed. so, dump it.
+
             } else if ( cmdLineArgs.isReplaceCmd ) {
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": loading @Replace-file: " + cmdLineArgs.replaceFilePath );
-                Object o = null;
+                Object replContent = null;
                 if ( ! cmdLineArgs.replaceFilePath.startsWith("@") ) {
                     // user provided a SIMPLE String as the RHS-replacement value
-                    o = cmdLineArgs.replaceFilePath;
+                    replContent = cmdLineArgs.replaceFilePath;
                 } else {
                     // user provided a FILE for replacement-content (instead of a simple-string)
                     try {
                         final java.io.InputStream is2 = new java.io.FileInputStream(cmdLineArgs.replaceFilePath.substring(1) ); //remove '@' as the 1st character in the user's input
                         final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
                         // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file contents into a java.util.Map
-                        final LinkedHashMap replDataMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
-                        if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": Loaded REPLACEMENT-contents" );
-                        o = replDataMap;
+                        replContent = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+                        if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": Loaded REPLACEMENT-contents: ["+ replContent.toString() +"]");
                     } catch (java.io.IOException e) {
                         e.printStackTrace(System.err);
                         System.err.println("trouble with REPLACEMENT-File: '" + cmdLineArgs.replaceFilePath.substring(1) +"'.");
                         System.exit(11);
                     }
                 } // if-else startsWith"@"
-                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start CHANGE/REPLACE command " +o.toString() );
-                ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose, o );
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start CHANGE/REPLACE command using: [" + replContent.toString() +"]");
+                ReplaceYamlEntry replcmd = new ReplaceYamlEntry( cmdLineArgs.verbose, replContent );
                 replcmd.searchYamlForPattern( data, cmdLineArgs.yamlPathStr );
                 writer.write(data); // The contents of java.util.Map has been updated with replacement strings. so, dump it.
+
+            } else if ( cmdLineArgs.isMacroCmd ) {
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": loading Props file [" + cmdLineArgs.propertiesFilePath +"]" );
+                final Properties properties = new Properties();
+                if ( cmdLineArgs.propertiesFilePath != null ) {
+                    InputStream input = new FileInputStream( cmdLineArgs.propertiesFilePath );
+                    properties.load(input);
+                }
+                if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start MACRO command using: [Props file [" + cmdLineArgs.propertiesFilePath +"]" );
+                YamlMacroProcessor macro = new YamlMacroProcessor( cmdLineArgs.verbose );
+                final LinkedHashMap outpMap = new LinkedHashMap();
+                macro.recursiveSearch( data, outpMap, properties );
+                writer.write( outpMap ); // The contents of java.util.Map has been updated with replacement strings. so, dump it.
+
             } else {
                 System.err.println("Unimplemented command: "+cmdLineArgs.toString() );
             }
