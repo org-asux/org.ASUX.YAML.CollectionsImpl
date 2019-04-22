@@ -32,6 +32,7 @@
 
 package org.ASUX.yaml;
 
+import java.io.StringBufferInputStream;
 //import java.util.Map;
 //import java.util.LinkedList;
 //import java.util.ArrayList;
@@ -94,14 +95,16 @@ public class Cmd {
 
             //-----------------------
             // prepare for output: whether it goes to System.out -or- to an actual output-file.
-            final com.esotericsoftware.yamlbeans.YamlWriter writer = (cmdLineArgs.outputFilePath.equals("-")) ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.OutputStreamWriter(System.out) ) : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
+            final com.esotericsoftware.yamlbeans.YamlWriter writer = (cmdLineArgs.outputFilePath.equals("-"))
+                ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.OutputStreamWriter(System.out) )
+                : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
 
             // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
             writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
-//                writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
-//                writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+            //    writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
+            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
+            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
+            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
 
             //-----------------------
             // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file contents into a java.util.Map
@@ -152,13 +155,17 @@ public class Cmd {
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": loading Props file [" + cmdLineArgs.propertiesFilePath +"]" );
                 final Properties properties = new Properties();
                 if ( cmdLineArgs.propertiesFilePath != null ) {
-                    InputStream input = new FileInputStream( cmdLineArgs.propertiesFilePath );
+                    java.io.InputStream input = new java.io.FileInputStream( cmdLineArgs.propertiesFilePath );
                     properties.load(input);
                 }
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start MACRO command using: [Props file [" + cmdLineArgs.propertiesFilePath +"]" );
                 YamlMacroProcessor macro = new YamlMacroProcessor( cmdLineArgs.verbose );
-                final LinkedHashMap outpMap = new LinkedHashMap();
+                final LinkedHashMap<Object,Object> outpMap = new LinkedHashMap<>();
+                // final java.io.InputStream is2 = new java.io.StringBufferInputStream("");
+                // final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+                // final LinkedHashMap outpMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
                 macro.recursiveSearch( data, outpMap, properties );
+                // System.out.println(outpMap.toString());
                 writer.write( outpMap ); // The contents of java.util.Map has been updated with replacement strings. so, dump it.
 
             } else {
