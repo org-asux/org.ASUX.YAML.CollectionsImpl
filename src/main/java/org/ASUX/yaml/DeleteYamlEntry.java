@@ -45,7 +45,7 @@ import java.util.LinkedList;
  */
 public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.DeleteYamlEntry";
+    public static final String CLASSNAME = "org.ASUX.yaml.DeleteYamlEntry";
 
     protected final LinkedList<Tuple<Object,Map> > keys2bRemoved = new LinkedList<>();
 

@@ -46,7 +46,7 @@ import java.util.LinkedHashMap;
  */
 public class ReadYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReadYamlEntry";
+    public static final String CLASSNAME = "org.ASUX.yaml.ReadYamlEntry";
 
     public int count = 0;
 

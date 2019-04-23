@@ -52,7 +52,7 @@ import java.io.IOException;
  */
 public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.ReplaceYamlEntry";
+    public static final String CLASSNAME = "org.ASUX.yaml.ReplaceYamlEntry";
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
     protected final LinkedList<Tuple<Object,Map> > keys2bRemoved = new LinkedList<>();
