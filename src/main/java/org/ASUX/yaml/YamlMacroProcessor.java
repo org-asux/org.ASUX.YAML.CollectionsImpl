@@ -52,7 +52,7 @@ import java.util.regex.*;
  */
 public class YamlMacroProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.YamlMacroProcessor";
+    public static final String CLASSNAME = "org.ASUX.yaml.YamlMacroProcessor";
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -82,18 +82,19 @@ public class YamlMacroProcessor {
      */
     public boolean recursiveSearch(
             final Map _inpMap,
-			final LinkedHashMap<Object,Object> _outpMap,
+			final LinkedHashMap<String,Object> _outpMap,
 			final Properties _props
     ) throws com.esotericsoftware.yamlbeans.YamlException {
 
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
 
         boolean bChangesMade = false;
+		// final org.ASUX.yaml.Tools tool = new org.ASUX.yaml.Tools( this.verbose );
 
         //--------------------------
         for (Object keyAsIs : _inpMap.keySet()) {
 
-            final String key = checkForMacros( keyAsIs.toString(), _props );
+            final String key = evaluateMacros( keyAsIs.toString(), _props );
             assert( key != null );
 
             // Note: the lookup within _inpMap .. uses keyAsIs.  Not key.
@@ -106,9 +107,13 @@ public class YamlMacroProcessor {
 			// So.. we need to keep recursing (specifically for Map & ArrayList YAML elements)
 			if ( rhs instanceof Map ) {
 
-				final LinkedHashMap<Object,Object> newMap1 = new LinkedHashMap<>();
+				final LinkedHashMap<String,Object> newMap1 = new LinkedHashMap<>();
 				bChangesMade = this.recursiveSearch( (Map)rhs, newMap1, _props ); // recursion call
+
 				_outpMap.put( key, newMap1 );
+				// Why am I not simply doing:-       _outpMap.put( key, newMap1 )
+				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
+				// tool.addMapEntry( _outpMap, key, newMap1 );
 
 			} else if ( rhs instanceof java.util.ArrayList ) {
 
@@ -119,12 +124,12 @@ public class YamlMacroProcessor {
 				for ( Object o: arr ) {
 					// iterate over each element
 					if ( o instanceof Map ) {
-						final LinkedHashMap<Object,Object> newMap2 = new LinkedHashMap<>();
+						final LinkedHashMap<String,Object> newMap2 = new LinkedHashMap<>();
 						bChangesMade = this.recursiveSearch( (Map)rhs, newMap2, _props ); // recursion call
 						newarr.add( newMap2 );
 					} else if ( o instanceof java.lang.String ) {
 						// by o.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-						newarr.add ( checkForMacros( o.toString(), _props ) );
+						newarr.add ( evaluateMacros( o.toString(), _props ) );
 					} else {
 						System.err.println(CLASSNAME +": incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 						System.exit(92); // This is a serious failure. Shouldn't be happening.
@@ -132,10 +137,17 @@ public class YamlMacroProcessor {
 				} // for Object o: arr
 
 				_outpMap.put( key, newarr );
+				// Why am I not simply doing:-       _outpMap.put( key, newarr )
+				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
+				// tool.addMapEntry( _outpMap, key, newarr );
 
 			} else if ( rhs instanceof java.lang.String ) {
 				// by rhs.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-				_outpMap.put( key, checkForMacros( rhs.toString(), _props)   );
+				final String s = evaluateMacros( rhs.toString(), _props);
+				_outpMap.put( key, s );
+				// Why am I not simply doing:-       _outpMap.put( key, newarr )
+				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
+				// tool.addStringEntry( _outpMap, key, s );
 
             } else {
 				System.err.println(CLASSNAME +": incomplete code #2: failure w Type '"+ rhs.getClass().getName() +"'");
@@ -152,7 +164,7 @@ public class YamlMacroProcessor {
 
 	public static final String pattStr = "[$]\\{ASUX::([^}]+)\\}";
 
-	public static String checkForMacros( final String _s, final Properties _props) {
+	public static String evaluateMacros( final String _s, final Properties _props) {
 		if ( (_s==null) || (_props==null) ) return null;
 
 		try {
@@ -175,8 +187,11 @@ public class YamlMacroProcessor {
 			}
 
 			if(found){
-				if ( prevIndex < _s.length() )
+				if ( prevIndex < _s.length() ) {
+					// whatever is LEFT ***AFTER*** the last match.. we can't forget about that!
 					retstr += _s.substring( prevIndex );
+				}
+				// System.out.println( "Properties LOOKUP found: for ["+ retstr +"]");
 				return retstr;
 			} else {
 				// System.out.println("No match found.");
