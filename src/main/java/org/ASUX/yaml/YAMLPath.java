@@ -74,7 +74,7 @@ import java.io.IOException;
  */
 public class YAMLPath implements Serializable {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.YAMLPath";
+    public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
 
     public boolean isValid = false;
     public final String yamlPath;
