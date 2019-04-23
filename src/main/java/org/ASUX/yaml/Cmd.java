@@ -62,7 +62,7 @@ import static org.junit.Assert.*;
  */
 public class Cmd {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.Cmd";
+    public static final String CLASSNAME = "org.ASUX.yaml.Cmd";
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -84,7 +84,7 @@ public class Cmd {
 
         CmdLineArgs cmdLineArgs = null;
 
-        try{
+        try {
             cmdLineArgs = new CmdLineArgs(args);
 
             //-----------------------
@@ -160,7 +160,7 @@ public class Cmd {
                 }
                 if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": about to start MACRO command using: [Props file [" + cmdLineArgs.propertiesFilePath +"]" );
                 YamlMacroProcessor macro = new YamlMacroProcessor( cmdLineArgs.verbose );
-                final LinkedHashMap<Object,Object> outpMap = new LinkedHashMap<>();
+                final LinkedHashMap<String,Object> outpMap = new LinkedHashMap<>();
                 // final java.io.InputStream is2 = new java.io.StringBufferInputStream("");
                 // final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
                 // final LinkedHashMap outpMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
@@ -173,7 +173,16 @@ public class Cmd {
             }
 
             // cleanup
-            if ( ! cmdLineArgs.outputFilePath.equals("-") ) writer.close();
+            if ( ! cmdLineArgs.outputFilePath.equals("-") ) // if we're writing to an actual file..
+                writer.close(); // close the actual file.
+            else
+                writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). See https://github.com/EsotericSoftware/yamlbeans/issues/111
+
+
+
+                // !!!! WARNING !!! Because of the above writer.close().. System.out.println(..) NO LONGER WORKS beyond this
+
+
 
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             e.printStackTrace(System.err);
