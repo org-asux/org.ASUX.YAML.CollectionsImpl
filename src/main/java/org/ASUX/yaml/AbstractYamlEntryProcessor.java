@@ -52,7 +52,7 @@ import static org.junit.Assert.*;
 */
 public abstract class AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "com.esotericsoftware.yamlbeans.AbstractYamlEntryProcessor";
+    public static final String CLASSNAME = "org.ASUX.yaml.AbstractYamlEntryProcessor";
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
