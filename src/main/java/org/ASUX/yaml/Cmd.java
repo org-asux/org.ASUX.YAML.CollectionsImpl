@@ -94,17 +94,21 @@ public class Cmd {
             final java.io.Reader reader1 = new java.io.InputStreamReader(is1);
 
             //-----------------------
-            // prepare for output: whether it goes to System.out -or- to an actual output-file.
-            final com.esotericsoftware.yamlbeans.YamlWriter writer = (cmdLineArgs.outputFilePath.equals("-"))
-                ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.OutputStreamWriter(System.out) )
-                : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
+            com.esotericsoftware.yamlbeans.YamlWriter writer = null;
 
-            // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
-            writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
-            //    writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
-            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
-            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
-            //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+            if ( cmdLineArgs.isDelCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd ) {
+                // prepare for output: whether it goes to System.out -or- to an actual output-file.
+                writer = (cmdLineArgs.outputFilePath.equals("-"))
+                    ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.OutputStreamWriter(System.out) )
+                    : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
+
+                // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
+                writer.getConfig().writeConfig.setWriteClassname( com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER ); // I hate !org.pkg.class within YAML files.  So does AWS I believe.
+                //    writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
+                //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
+                //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
+                //    writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+            } // if
 
             //-----------------------
             // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file contents into a java.util.Map
@@ -172,15 +176,17 @@ public class Cmd {
                 System.err.println("Unimplemented command: "+cmdLineArgs.toString() );
             }
 
+
             // cleanup
-            if ( ! cmdLineArgs.outputFilePath.equals("-") ) // if we're writing to an actual file..
-                writer.close(); // close the actual file.
-            else
-                writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). See https://github.com/EsotericSoftware/yamlbeans/issues/111
+            if ( cmdLineArgs.outputFilePath.equals("-") ) { // if we're writing to STDOUT/System.out ..
+                if ( writer != null ) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). See https://github.com/EsotericSoftware/yamlbeans/issues/111
+            } else {
+                if ( writer != null ) writer.close(); // close the actual file.
+            }
 
 
 
-                // !!!! WARNING !!! Because of the above writer.close().. System.out.println(..) NO LONGER WORKS beyond this
+            // !!!! WARNING !!! Because of the above writer.close().. System.out.println(..) NO LONGER WORKS beyond this
 
 
 
