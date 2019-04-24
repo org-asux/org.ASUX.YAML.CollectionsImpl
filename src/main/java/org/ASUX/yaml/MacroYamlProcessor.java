@@ -50,22 +50,22 @@ import java.util.regex.*;
  * @see org.ASUX.yaml.DeleteYamlEntry
  * @see org.ASUX.yaml.ReplaceYamlEntry
  */
-public class YamlMacroProcessor {
+public class MacroYamlProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.YamlMacroProcessor";
+    public static final String CLASSNAME = "org.ASUX.yaml.MacroYamlProcessor";
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
      */
-    public final boolean verbose;
+    private final boolean verbose;
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public YamlMacroProcessor(boolean _verbose) {
+    public MacroYamlProcessor(boolean _verbose) {
         this.verbose = _verbose;
     }
-    protected YamlMacroProcessor(){
+    protected MacroYamlProcessor(){
         this.verbose = false;
     }
 
