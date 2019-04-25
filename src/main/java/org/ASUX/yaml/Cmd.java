@@ -282,7 +282,7 @@ public class Cmd {
             return outputStr;
 
         } else if ( _cmdLineArgs.isListCmd ) {
-            ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.yamlPatternDelimiter );
+            ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, YAMLPath.DEFAULTPRINTDELIMITER );
             listcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             final ArrayList<String> outputStr = listcmd.getOutput();
             return outputStr;
