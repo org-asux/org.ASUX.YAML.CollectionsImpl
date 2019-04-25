@@ -32,7 +32,7 @@
 
 package org.ASUX.yaml;
 
-import java.util.Map;
+// import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.ArrayList;
@@ -72,16 +72,16 @@ public class MacroYamlProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
-     *  <p>Note: this function expects you to pass in a 'new java.utils.Map()' as the 2nd parameter.  It will be 'filled' when function returns.</p>
+     *  <p>Note: this function expects you to pass in a 'new java.utils.LinkedHashMap&lt;String, Object&gt;()' as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _inpMap and _outMap will be identical when function returns</p>
-     *  @param _inpMap A java.utils.LinkedHashMap (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
-     *  @param _outpMap Pass in a new 'empty' java.util.Map().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
+     *  @param _inpMap A java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _outpMap Pass in a new 'empty' java.utils.LinkedHashMap&lt;String, Object&gt;().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
      *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
      */
     public boolean recursiveSearch(
-            final Map _inpMap,
+            final LinkedHashMap<String, Object> _inpMap,
 			final LinkedHashMap<String,Object> _outpMap,
 			final Properties _props
     ) throws com.esotericsoftware.yamlbeans.YamlException {
@@ -98,34 +98,38 @@ public class MacroYamlProcessor {
             assert( key != null );
 
             // Note: the lookup within _inpMap .. uses keyAsIs.  Not key.
-            final Object rhs = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
-            final String rhsStr = rhs.toString(); // to make verbose logging code simplified
+            final Object rhsObj = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
+            final String rhsStr = rhsObj.toString(); // to make verbose logging code simplified
 
             if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
 
 			//--------------------------------------------------------
-			// So.. we need to keep recursing (specifically for Map & ArrayList YAML elements)
-			if ( rhs instanceof Map ) {
+			// So.. we need to keep recursing (specifically for LinkedHashMap<String, Object> & ArrayList YAML elements)
+			if ( rhsObj instanceof LinkedHashMap ) {
 
-				final LinkedHashMap<String,Object> newMap1 = new LinkedHashMap<>();
-				bChangesMade = this.recursiveSearch( (Map)rhs, newMap1, _props ); // recursion call
+				final LinkedHashMap<String,Object> newMap1	= new LinkedHashMap<>(); // create an empty Map
+				@SuppressWarnings("unchecked")
+				final LinkedHashMap<String, Object> rhs	= (LinkedHashMap<String, Object>) rhsObj;
+				bChangesMade = this.recursiveSearch( rhs, newMap1, _props ); // recursion call
 
 				_outpMap.put( key, newMap1 );
 				// Why am I not simply doing:-       _outpMap.put( key, newMap1 )
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
 				// tool.addMapEntry( _outpMap, key, newMap1 );
 
-			} else if ( rhs instanceof java.util.ArrayList ) {
+			} else if ( rhsObj instanceof java.util.ArrayList ) {
 
-				final ArrayList arr = (ArrayList) rhs;
+				final ArrayList arr = (ArrayList) rhsObj;
 				final ArrayList<Object> newarr = new ArrayList<>();
 
 				// Loop thru the 'arr' Array
 				for ( Object o: arr ) {
 					// iterate over each element
-					if ( o instanceof Map ) {
+					if ( o instanceof LinkedHashMap ) {
 						final LinkedHashMap<String,Object> newMap2 = new LinkedHashMap<>();
-						bChangesMade = this.recursiveSearch( (Map)rhs, newMap2, _props ); // recursion call
+						@SuppressWarnings("unchecked")
+						final LinkedHashMap<String,Object> rhs22 = (LinkedHashMap<String,Object>) o;
+						bChangesMade = this.recursiveSearch( rhs22, newMap2, _props ); // recursion call
 						newarr.add( newMap2 );
 					} else if ( o instanceof java.lang.String ) {
 						// by o.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
@@ -133,7 +137,7 @@ public class MacroYamlProcessor {
 					} else {
 						System.err.println(CLASSNAME +": incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 						System.exit(92); // This is a serious failure. Shouldn't be happening.
-					} // if-Else   o instanceof Map - (WITHIN FOR-LOOP)
+					} // if-Else   o instanceof LinkedHashMap<String, Object> - (WITHIN FOR-LOOP)
 				} // for Object o: arr
 
 				_outpMap.put( key, newarr );
@@ -141,16 +145,16 @@ public class MacroYamlProcessor {
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
 				// tool.addMapEntry( _outpMap, key, newarr );
 
-			} else if ( rhs instanceof java.lang.String ) {
-				// by rhs.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-				final String s = evaluateMacros( rhs.toString(), _props);
+			} else if ( rhsObj instanceof java.lang.String ) {
+				// by rhsObj.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
+				final String s = evaluateMacros( rhsObj.toString(), _props);
 				_outpMap.put( key, s );
 				// Why am I not simply doing:-       _outpMap.put( key, newarr )
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
 				// tool.addStringEntry( _outpMap, key, s );
 
             } else {
-				System.err.println(CLASSNAME +": incomplete code #2: failure w Type '"+ rhs.getClass().getName() +"'");
+				System.err.println(CLASSNAME +": incomplete code #2: failure w Type '"+ rhsObj.getClass().getName() +"'");
 				System.exit(93); // This is a serious failure. Shouldn't be happening.
             }// if-else yamlPElemPatt.matcher()
 
@@ -162,10 +166,24 @@ public class MacroYamlProcessor {
         return bChangesMade;
     }
 
+	//=============================================================================
+	//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	//=============================================================================
+
+	//------------------------------------------------------------------
 	public static final String pattStr = "[$]\\{ASUX::([^}]+)\\}";
 
+	/**
+	 * <p>Pass in a string as 1st parameter and a properties file as 2nd parameter.</p>
+	 * <p>All instances of ${ASUX::___} are replaced with values for ___ (within Properties instance).</p>
+	 * Any other expressions like ${XYZABC} are LEFT UNTOUCHED, as it does NOT have the ASUX:: prefixc.
+	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
+	 * @param _props a java.util.Properties object (null will mean function returns immediately)
+	 * @return the original string as-is (if no macros were detected).. or the altered version
+	 */
 	public static String evaluateMacros( final String _s, final Properties _props) {
-		if ( (_s==null) || (_props==null) ) return null;
+		if (_s==null) return null;
+		if (_props==null) return _s;
 
 		try {
 
