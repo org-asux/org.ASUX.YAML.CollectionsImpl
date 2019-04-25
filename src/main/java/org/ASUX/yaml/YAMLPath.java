@@ -74,10 +74,13 @@ import java.io.IOException;
  */
 public class YAMLPath implements Serializable {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
+    public static final String DEFAULTDELIMITER = "\\.";
+
+	public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
 
     public boolean isValid = false;
     public final String yamlPath;
+    public final String delimiter;
     public final String prntDelimiter;
     public String[] yamlElemArr = new String[]{"UNinitialized", "yamlElemArr"};
 
@@ -89,7 +92,7 @@ public class YAMLPath implements Serializable {
      *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "." - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      */
     public YAMLPath(String _yp) {
-        this(_yp, "\\.");
+        this(_yp, DEFAULTDELIMITER);
     }
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
@@ -99,7 +102,8 @@ public class YAMLPath implements Serializable {
      */
     public YAMLPath(String _yp, final String _delim) {
         this.yamlPath = _yp; //save it
-        this.prntDelimiter = _delim.replaceAll​("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
+        this.delimiter = _delim;
+        this.prntDelimiter = _delim.replaceAll("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
         // System.out.println( "x\\.y".replaceAll​("\\\\", "") );
 
         // Sanity check of "_delim"
@@ -111,21 +115,21 @@ public class YAMLPath implements Serializable {
             return; // invalid YAML Path.  Let "this.isValid" stay as false
         }
 
-        // System.out.println(CLASSNAME + ": Sanity check completed.");
+        // System.out.println(CLASSNAME + ": Sanity check completed for yp=["+ _yp +"]" );
         //        boolean b = Pattern.matches("a*b", "aaaaab");
         _yp.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
         if ( _yp.length() <= 0 ) return; // invalid YAML Path.  Let "this.isValid" stay as false
 
         // System.out.println(CLASSNAME + ": about to split '"+_yp+"' with delimiter '"+_delim+"'");
         this.yamlElemArr = _yp.split(_delim);
-//        for (String str: yamlElemArr) {}
+        // for (String str: yamlElemArr) {}
         // System.out.println(CLASSNAME + ": this.yamlElemArr has length '"+this.yamlElemArr.length+"'");
         // System.out.println(CLASSNAME + ": this.yamlElemArr[0] = '"+this.yamlElemArr[0]+"'");
 
         for(int ix=0; ix < this.yamlElemArr.length; ix++ ) {
             String elem = this.yamlElemArr[ix];
             try {
-                //System.err.println(CLASSNAME+": checking on .. YAML-element '"+ elem +"'.");
+                // System.out.println(CLASSNAME+": checking on .. YAML-element '"+ elem +"'.");
                 if (elem.equals("**") ) {
                     // nothing to validate, as its NOT a valid Regular-expression.  Let "**" through!
                 }else {
@@ -133,7 +137,7 @@ public class YAMLPath implements Serializable {
                         elem = ".*"; // convert human-friendly * into formal-regexp .*
                         this.yamlElemArr[ix] = elem;
                     }
-                    //System.err.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
+                    // System.out.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
                     final Pattern p = Pattern.compile(elem); // not using this, but if 'elem' is invalid, exception thrown
                 }
             }catch(PatternSyntaxException e){
