@@ -48,10 +48,6 @@ import static org.junit.Assert.*;
  *  <p>This class is a bunch of tools to help make it easy to work with the java.util.Map objects that the EsotericSoftware library creates.</p>
  *  <p>One example is the work around required when replacing the 'Key' - within the MACRO command Processor.</p>
  *  <p>If the key is already inside single or double-quotes.. then the replacement ends up as <code>'"newkeystring"'</code></p>
- *
- * @see org.ASUX.yaml.CmdLineArgs
- * @see org.ASUX.yaml.Cmd
- * @see org.ASUX.yaml.YamlMacroProcessor
  */
 public class Tools {
 
@@ -72,18 +68,21 @@ public class Tools {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** As com.esotericsoftware.yamlBeans has some magic where Keys are NOT strings! ..
      *  In order for me to add new entries to the _map created by that library, I need to go thru hoops.
+     *  @param _map a java.util.LinkedHashMap&lt;String, Object&gt; object
      *  @param _key the key in key-value pair
      *  @param _rhs the value(java.lang.Object) in the key-value pair
      */
-    public void addStringEntry( LinkedHashMap _map, final String _key, final String _rhs) {
+    public void addStringEntry( LinkedHashMap<String, Object> _map, final String _key, final String _rhs) {
 
         final String quotedStr = _rhs.contains(":") ? "'"+_rhs+"'" : _rhs;
         // final String s = "{ "+ _key +": "+ quotedStr +" }";
         final String s = _key +": "+ quotedStr +"\n";
         try {
+            @SuppressWarnings("deprecated")
             final java.io.InputStream is2 = new java.io.StringBufferInputStream( s );
             final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
-            final LinkedHashMap tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+            @SuppressWarnings("unchecked")
+            final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
             if ( this.verbose ) System.out.println( CLASSNAME + ": created new Map [" + tempMap.toString() +"]" );
 
             _map.putAll( tempMap );
@@ -108,10 +107,11 @@ public class Tools {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** As com.esotericsoftware.yamlBeans has some magic where Keys are NOT strings! ..
      *  In order for me to add new entries to the _map created by that library, I need to go thru hoops.
+     *  @param _map a java.util.LinkedHashMap&lt;String, Object&gt; object
      *  @param _key the key in key-value pair
      *  @param _rhs the value(java.lang.Object) in the key-value pair
      */
-    public void addMapEntry( LinkedHashMap _map, final String _key, final Object _rhs) {
+    public void addMapEntry( LinkedHashMap<String, Object> _map, final String _key, final Object _rhs) {
 
         // if ( _rhs instanceof String ) {
         //     System.err.println( CLASSNAME + ": Internal error: addMapEntry called with a String parameter ["+ _rhs.toString() +"]");
@@ -148,7 +148,8 @@ public class Tools {
 
             final java.io.InputStream is2 = new java.io.StringBufferInputStream( s );
             final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
-            final LinkedHashMap tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+            @SuppressWarnings("unchecked")
+            final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
             if ( this.verbose ) System.out.println( CLASSNAME + ": created new Map [" + tempMap.toString() +"]" );
 
             _map.putAll( tempMap );
