@@ -196,7 +196,6 @@ public class CmdLineArgs {
             if (this.isReplaceCmd) this.yamlRegExpStr = searchArgs[0]; // 1st of the 2 arguments for REPLACE cmd.
             if (this.isReplaceCmd) this.replaceFilePath = searchArgs[1];
 
-            this.replaceFilePath = cmd.getOptionValue(REPLACECMD);
             this.propertiesFilePath = cmd.getOptionValue(MACROCMD);
             this.batchFilePath = cmd.getOptionValue(BATCHCMD);
 
