@@ -153,6 +153,21 @@ public abstract class AbstractYamlEntryProcessor {
         return retval;
     }
 
+    /**
+     * A convenience function, to cut down on code-size within recursiveSearch() below.. especially avoiding the SuppressWarnings("unchecked")
+     * If null, you'll get an empty NEW LinkedList<String> object.
+     * If Not null, the LinkedList<String> is SHALLOW-cloned, but obviously, the String objects are shared.  Not an issue as String is immutable.
+     * @ param pass in an object of type LinkedList<String>  (null is ok)
+     */
+    private LinkedList<String> clone( final LinkedList<String> _orig ) {
+        if ( _orig == null ) return new LinkedList<String> ();
+
+        @SuppressWarnings("unchecked")
+        final LinkedList<String> clone = (LinkedList<String>) _orig.clone();
+
+        return clone;
+    }
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
@@ -164,12 +179,14 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return true = whether at least one match happened.
      *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+     *  @throws java.util.regex.PatternSyntaxException - this is thrown the innocuous String.match(regexp)
      */
     public boolean recursiveSearch(LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final LinkedList<String> _end2EndPaths )
-                    throws com.esotericsoftware.yamlbeans.YamlException
+                    throws com.esotericsoftware.yamlbeans.YamlException, java.util.regex.PatternSyntaxException 
     {
-        if ( _map == null || (! _yamlPath.isValid) ) return false;
-        if ( ! _yamlPath.hasNext() ) return false; // YAML path has ended
+        if ( (_map==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
+        if (  ! _yamlPath.isValid ) return false;
+        if ( ! _yamlPath.hasNext() ) return true; // YAML path has ended.  So, must be a good thing, as we got this far down the YAML-Path
 
         //--------------------------
         final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
@@ -209,16 +226,15 @@ public abstract class AbstractYamlEntryProcessor {
                 //------------------------------------------------------
                 assert (_yamlPath.hasNext()); // why on earth would this assertion fail - see checks @ top of function.
 
-                final YAMLPath cloneOfYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
+                final YAMLPath lookForwardYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
                 if (  hasThisYamlLineLiterallyMatched ||  !  _yamlPath.hasWildcardPrefix() )
-                    cloneOfYAMLPath.next(); // _yamlPath.get() should continue to have "**" as previous element.
+                    lookForwardYAMLPath.next(); // _yamlPath.get() should continue to have "**" as previous element.
 
-                @SuppressWarnings("unchecked")
-                final LinkedList<String> cloneOfE2EPaths = (LinkedList<String>) _end2EndPaths.clone();
+                final LinkedList<String> cloneOfE2EPaths = this.clone( _end2EndPaths );
 
-                if ( this.verbose ) System.out.println(CLASSNAME + ": @ whether to recurse: deepcloned YamlPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +" -- cloneOfYP.hasNext()='"+ cloneOfYAMLPath.hasNext() +"'  _yamlPath.hasWildcardPrefix()='"+ _yamlPath.hasWildcardPrefix() +"'");
+                if ( this.verbose ) System.out.println(CLASSNAME + ": @ whether to recurse: deepcloned YamlPath @# " + lookForwardYAMLPath.index() +"\t"+ lookForwardYAMLPath.getPrefix() +"\t"+ lookForwardYAMLPath.get() +"\t"+ lookForwardYAMLPath.getSuffix() +" -- cloneOfYP.hasNext()='"+ lookForwardYAMLPath.hasNext() +"'  _yamlPath.hasWildcardPrefix()='"+ _yamlPath.hasWildcardPrefix() +"'");
 
-                if ( ! cloneOfYAMLPath.hasNext() ) {
+                if ( ! lookForwardYAMLPath.hasNext() ) {
                     // NO more recursion feasible!
                     // well! we've matched end2end .. to a "Map" element (instead of String elem)!
 
@@ -240,7 +256,7 @@ public abstract class AbstractYamlEntryProcessor {
                 final boolean callbkRet2 = onPartialMatch(_map, _yamlPath, key, null, _end2EndPaths );
                 if ( ! callbkRet2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
 
-                if ( this.verbose ) System.out.println(CLASSNAME + ": recursing with YAMLPath @# " + cloneOfYAMLPath.index() +"\t"+ cloneOfYAMLPath.getPrefix() +"\t"+ cloneOfYAMLPath.get() +"\t"+ cloneOfYAMLPath.getSuffix() +": ... @ YAML-file-location: '"+ key +"': "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+                if ( this.verbose ) System.out.println(CLASSNAME + ": recursing with YAMLPath @# " + lookForwardYAMLPath.index() +"\t"+ lookForwardYAMLPath.getPrefix() +"\t"+ lookForwardYAMLPath.get() +"\t"+ lookForwardYAMLPath.getSuffix() +": ... @ YAML-file-location: '"+ key +"': "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
 
                 //--------------------------------------------------------
                 // if we are here, we've only a PARTIAL match.
@@ -249,18 +265,98 @@ public abstract class AbstractYamlEntryProcessor {
 
                     @SuppressWarnings("unchecked")
                     final LinkedHashMap<String, Object> rhs2 = (LinkedHashMap<String, Object>) rhs;
-                    aMatchFound = this.recursiveSearch( rhs2, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
+                    aMatchFound = this.recursiveSearch( rhs2, lookForwardYAMLPath, cloneOfE2EPaths); // recursion call
+                    // we do Not know how deep the recursion is.
+                    // once recursion call returns, we happily go back to the UNTOUCHED _yamlPath & to _end2EndPaths  - which is still intact for use by the FOR loop.
 
                 } else if ( rhs instanceof java.util.ArrayList ) {
 
+                    // Let's check: whether a wildcard('**'), or we have a '*' for current path-element
+                    boolean bMatchAny = false;
+                    boolean bWildcard = false;
+                    boolean bLetsIterate = false;
+                    String upcomingPathElem = null;
+                    YAMLPath nonStarLookFwdYAMLPath = null;
+                    if (  lookForwardYAMLPath.hasWildcardPrefix() ) {
+                        // of course! we should loop thru each element of the array below.
+                        // WildCard is so powerful a concept, and like the Greedy-Algorithms of RegExp '*'-matcher.. it will 'match anything'
+                        // So, we'll continue 'recursion' in code below - assuming the next non-WildCard element is STILL this WildCard element (that is what 'greedy matching means!)
+                        nonStarLookFwdYAMLPath = lookForwardYAMLPath;
+                        upcomingPathElem = lookForwardYAMLPath.get(); 
+                        bWildcard = true;
+                        bLetsIterate = true;
+                    } else {
+                        if ( lookForwardYAMLPath.get().equals( YAMLPath.MATCHANYSINGLEPATHELEMENT ) ) {
+                            // We've a '*'/'.*'.. .. so, let's clone .. to SAFELY see one step ahead.
+                            // make 'nonStarLookFwdYAMLPath' point to the YAML-Path-Pattern-element !!!that exists RIGHT AFTER!!! the current '.*'/'*'
+                            // After testing successfully, I can say that it's OK to assume that anything following a '*'/'.*' is a NON-Star element ---- especially, if the user entered patterns like 'xyz.abc.*.*.qqq' ??? Hmmmmm.
+                            nonStarLookFwdYAMLPath = YAMLPath.deepClone(lookForwardYAMLPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
+                            nonStarLookFwdYAMLPath.next(); // let's see what the next yaml-element is.  We know this will succeed.
+                            upcomingPathElem = nonStarLookFwdYAMLPath.get();
+                            bMatchAny = true;
+                            bLetsIterate = true;
+                        } else {
+                            if ( lookForwardYAMLPath.get().matches( "[0-9][0-9]*" ) ) {
+                                // Clearly.. We should definitely check out each item in the array 
+                                // Make 'nonStarLookFwdYAMLPath' point to the YAML-Path-Pattern-element !!!that exists RIGHT AFTER!!! the 0
+                                nonStarLookFwdYAMLPath = YAMLPath.deepClone(lookForwardYAMLPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
+                                nonStarLookFwdYAMLPath.next(); // let's see what the next yaml-element is.  We know this will succeed.
+                                upcomingPathElem = lookForwardYAMLPath.get();
+                                bLetsIterate = true;
+                            } else {
+                                // No point loopoing thru the array.
+                                bLetsIterate = false;
+                            }
+                        }
+                    }
+                    // by reaching here, we're sure that nonStarLookFwdYAMLPath, upcomingPathElem, bLetsIterate & bMatchAny have valid values.
+
                     ArrayList arr = (ArrayList) rhs;
-                    for ( Object o: arr ) {
-                        // iterate over each element?  Need a new variant of this function - to match "index"
-                        if ( o instanceof LinkedHashMap ) { // Shouldn't this always be true - per YAML spec?
+
+                    // ATTENTION: if bLetsIterate === false, we'll NOT be entering this loop.
+                    for ( int ix=0;  bLetsIterate && ix < arr.size(); ix ++ ) {
+
+                        final Object o = arr.get(ix); 
+
+                        // if have a '**' or *' for current path-element..  variable 'upcomingPathElem' will point to the next yaml-element within the YAML-Path-PATTERN is.
+                        // otherwise variable 'upcomingPathElem' will point to CURRENT yaml-element.
+
+                        if ( bWildcard || bMatchAny || Integer.valueOf(ix).toString().matches(upcomingPathElem) ) {
+                            if (   !   nonStarLookFwdYAMLPath.hasNext() ) {
+                                // yeah! We found a !!!full!!! end2end match!  Reason:- No more recursion is feasible.
+                                final LinkedList<String> clone222OfE2EPaths = this.clone( cloneOfE2EPaths ); // to keep _yamlPath intact as we ITERATE thru this ARRAY LIST.
+                                clone222OfE2EPaths.add("["+ix+"]"); // add the index like [1] into the discovered yaml-path
+                                // let sub-classes determine what to do here
+                                final boolean callbkRet6 = onEnd2EndMatch(_map, lookForwardYAMLPath, key, null, clone222OfE2EPaths); // location #2 for end2end match
+                                // we do Not know how deep the recursion is.
+                                // once recursion call returns, we happily go back to the UNTOUCHED _yamlPath & to _end2EndPaths  - which is still intact for use by the FOR loop.
+                                if ( this.verbose ) System.out.println(CLASSNAME +": callbkRet6="+callbkRet6+" End2End Match#2 @ YAML-File: "+ key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+                                if ( ! callbkRet6 ) continue; // Pretend that EVEN IF match failed (per sub-class), continue to next peer YAML element.
+                                aMatchFound = true;
+                                continue; // for loop over Array
+                            } else {
+                                // Ok. We're FORCED to "move to" next element of YAML-Path-PATTERN.
+                                // Fall thru out of this nested-IF into rest of FOR-Loop body.
+                            }
+                        } else {
+                            continue; // to next Array YAML element.
+                        }
+
+                        // We've got an INCOMPLETE-Match: Either via a wildcard('**'), or we have a '*' for current path-element or.. we've a INCORRECT index-match.
+                        //-------------------------------
+
+                        if ( o instanceof LinkedHashMap ) { // if the array-yaml-element is Not a simple string.
 
                             @SuppressWarnings("unchecked")
-                            final LinkedHashMap<String, Object> o2 = (LinkedHashMap<String, Object>) o;
-                            aMatchFound = this.recursiveSearch( o2, cloneOfYAMLPath, cloneOfE2EPaths); // recursion call
+                            final LinkedHashMap<String, Object> lhmp2 = (LinkedHashMap<String, Object>) o;
+
+                            // Let's prepare for recursion .. clone all modifiaable-variables being passed.
+                            final YAMLPath recursionYamlPath = YAMLPath.deepClone( nonStarLookFwdYAMLPath );
+                            final LinkedList<String> clone333OfE2EPaths = this.clone( cloneOfE2EPaths ); // to keep _yamlPath intact as we ITERATE thru this ARRAY LIST.
+                            clone333OfE2EPaths.add("["+ix+"]"); // add the index like [1] into the discovered yaml-path
+                            aMatchFound = this.recursiveSearch( lhmp2, recursionYamlPath, clone333OfE2EPaths); // recursion call
+                            // we do Not know how deep the recursion is.
+                            // once recursion call returns, we happily go back to the UNTOUCHED _yamlPath/nonStarLookFwdYAMLPath & to _end2EndPaths/cloneOfE2EPaths   - which is still intact for use by the FOR loop.
 
                         } else if ( o instanceof java.lang.String ) {
                             // can't be a match, as it's Not even in the format   "rhs: lhs"
