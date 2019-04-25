@@ -75,6 +75,8 @@ import java.io.IOException;
 public class YAMLPath implements Serializable {
 
     public static final String DEFAULTDELIMITER = "\\.";
+    public static final String DEFAULTPRINTDELIMITER = "\t";
+    public static final String MATCHANYSINGLEPATHELEMENT = ".*";
 
 	public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
 
@@ -103,7 +105,7 @@ public class YAMLPath implements Serializable {
     public YAMLPath(String _yp, final String _delim) {
         this.yamlPath = _yp; //save it
         this.delimiter = _delim;
-        this.prntDelimiter = _delim.replaceAll("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
+        this.prntDelimiter = DEFAULTPRINTDELIMITER; // _delim.replaceAll("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
         // System.out.println( "x\\.y".replaceAll​("\\\\", "") );
 
         // Sanity check of "_delim"
@@ -134,7 +136,7 @@ public class YAMLPath implements Serializable {
                     // nothing to validate, as its NOT a valid Regular-expression.  Let "**" through!
                 }else {
                     if (elem.equals("*") ) {
-                        elem = ".*"; // convert human-friendly * into formal-regexp .*
+                        elem = MATCHANYSINGLEPATHELEMENT; // convert human-friendly * into formal-regexp .*
                         this.yamlElemArr[ix] = elem;
                     }
                     // System.out.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
