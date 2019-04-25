@@ -51,24 +51,24 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
 
     public int count;
     private ArrayList<String> output;
-    private String yamlPatternDelimiter;
+    private String yamlPatternPRINTDelimiter;
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
-     *  @param _delim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
+     *  @param _printDelim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      */
-    public ListYamlEntry(boolean _verbose, final String _delim) {
+    public ListYamlEntry(boolean _verbose, final String _printDelim) {
         super(_verbose);
         this.count = 0;
         this.output = new ArrayList<>();
-        this.yamlPatternDelimiter = _delim;
+        this.yamlPatternPRINTDelimiter = _printDelim;
     }
 
     private ListYamlEntry() {
         super(false);
         this.count = 0;
         this.output = new ArrayList<>();
-        this.yamlPatternDelimiter = null;
+        this.yamlPatternPRINTDelimiter = null;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -94,7 +94,7 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
         // _end2EndPaths.forEach( s -> System.out.print(s+"\t") );    System.out.println();
         String sss = null;
         for ( String s: _end2EndPaths ) {
-            sss = (sss==null) ?   s    : sss + this.yamlPatternDelimiter + s;
+            sss = (sss==null) ?   s    : sss + this.yamlPatternPRINTDelimiter + s;
         }
         this.output.add( sss ); // could be a string or a java.util.LinkedHashMap<String, Object>
         // System.out.println("onEnd2EndMatch: _end2EndPaths = [" +sss +"]");
