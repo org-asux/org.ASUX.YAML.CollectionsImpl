@@ -225,4 +225,22 @@ public class MacroYamlProcessor {
 		return _s; // program control should never get here.
 	} // function
 
+	/**
+	 * This is a variant of evaluateMacros(), to support Batch-Cmd mode, where BatchFile can load MULTIPLE property-files
+	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
+	 * @param _props a java.util.Properties object (null will mean function returns immediately)
+	 * @return the original string as-is (if no macros were detected).. or the altered version
+	 */
+	public static String evaluateMacros( final String _s, final LinkedHashMap<String,Properties> _propsSet ) {
+		for( String key: _propsSet.keySet() ) {
+			final Properties p = _propsSet.get(key);
+			final String rstr = evaluateMacros(_s, p);
+			if ( rstr != null )
+				return rstr;
+			// else
+			// 	continue;
+		}
+		return null;
+	}
+
 }
