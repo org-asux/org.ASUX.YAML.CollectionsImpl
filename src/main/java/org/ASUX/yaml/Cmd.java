@@ -163,6 +163,7 @@ public class Cmd {
             final LinkedHashMap dataObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
             @SuppressWarnings("unchecked")
             final LinkedHashMap<String, Object> data = (LinkedHashMap<String, Object>) dataObj;
+            reader1.close();
 
             //======================================================================
             // run the command requested by user
@@ -338,7 +339,8 @@ public class Cmd {
         } else if ( _cmdLineArgs.isBatchCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): about to start MACRO command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
             BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose );
-            batcher.go( _data, _cmdLineArgs.batchFilePath );
+            LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
+            batcher.go( _cmdLineArgs.batchFilePath, _data, outpMap );
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return null;
 
