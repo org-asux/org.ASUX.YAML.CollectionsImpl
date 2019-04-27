@@ -64,9 +64,20 @@ public class ConfigFileProcessor {
     private ConfigFileProcessor() { this.verbose = false;}
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    private String fileName = null;
     private ArrayList<String> lines = new ArrayList<>();
     private Iterator<String> iterator = null;
+
+    private int currentLineNum = -1;
     private String currentLine = null;
+
+    boolean bIsPropertyLine = false;
+    boolean bIsSaveToLine = false;
+    boolean bIsUseAsInputLine = false;
+    boolean bIsForEachLine = false;
+    boolean bIsEndLine = false;
+    boolean bIsBatchLine = false;
+    private KVPair kv = null;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -74,18 +85,19 @@ public class ConfigFileProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** As com.esotericsoftware.yamlBeans has some magic where Keys are NOT strings! ..
      *  In order for me to add new entries to the _map created by that library, I need to go thru hoops.
-     *  @param _propsFilename the full path to the file (don't assume relative paths will work ALL the time)
+     *  @param _filename the full path to the file (don't assume relative paths will work ALL the time)
      *  @param _ok2TrimWhiteSpace true or false, whether to REMOVE any leading and trailing whitespace.  Example: For YAML processing, trimming is devastating.
      */
-    public void openFile( final String _propsFilename, final boolean _ok2TrimWhiteSpace ) {
+    public boolean openFile( final String _filename, final boolean _ok2TrimWhiteSpace ) throws Exception {
 
         this.reset(); // just in case.
+        this.fileName = _filename;
 
         String line = null;
         try {
-            final java.io.InputStream istrm = new java.io.FileInputStream( _propsFilename );
+            final java.io.InputStream istrm = new java.io.FileInputStream( this.fileName );
             // final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
-            if ( this.verbose ) System.out.println( CLASSNAME + ": openBatchFile(): successfully opened file [" + _propsFilename +"]" );
+            if ( this.verbose ) System.out.println( CLASSNAME + ": openBatchFile(): successfully opened file [" + this.fileName +"]" );
 
 			Pattern emptyPattern        = Pattern.compile( "^\\s*$" ); // empty line
 			Pattern hashlinePattern     = Pattern.compile( "^#.*" ); // from start of line ONLY
@@ -96,6 +108,7 @@ public class ConfigFileProcessor {
 
             final java.util.Scanner scanner = new java.util.Scanner( istrm );
             while (scanner.hasNextLine()) {
+                if ( this.currentLineNum < 0 ) this.currentLineNum = 1; else this.currentLineNum ++;
                 line = scanner.nextLine();
                 if ( this.verbose ) System.out.println( CLASSNAME + ": openBatchFile(): AS-IS line=[" + line +"]" );
 
@@ -132,23 +145,25 @@ public class ConfigFileProcessor {
             }
             scanner.close();
             istrm.close();
+            return true;
 
         // scanner.hasNext() only throws a RUNTIMEEXCEPTION: IllegalStateException - if this scanner is closed
         // scanner.next() only throws a RUNTIMEEXCEPTION: NoSuchElementException - if no more tokens are available
 
 		} catch (PatternSyntaxException e) {
-			System.err.println(CLASSNAME + ": openBatchFile(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": openBatchFile(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
         } catch (java.io.IOException e) {
             e.printStackTrace(System.err);
-            System.err.println( CLASSNAME + ": openBatchFile(): Failure to read/write IO for file ["+ _propsFilename +"]" );
-            System.exit(102);
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
-            System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error:.");
-            System.exit(103);
+            System.err.println( CLASSNAME + ": openBatchFile(): \n\nFailure to read/write IO for file ["+ this.fileName +"]" );
+            // System.exit(102);  Let the commands do a better job of informing the end-user.
+        // } catch (Exception e) {
+        //     e.printStackTrace(System.err);
+        //     System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error:.");
+        //     System.exit(103);
         }
+        return false;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -172,6 +187,7 @@ public class ConfigFileProcessor {
         } else {
             this.currentLine = null; // dont create chaos in code in other CLASSES that invokes on hasNextLine() and nextLine()
         }
+        resetFlagsForEachLine(); // so that the isXXX() methods invoked of this class -- now that we're on NEW/NEXT line -- will NOT take a shortcut!
         return this.currentLine;
     }
 
@@ -187,6 +203,22 @@ public class ConfigFileProcessor {
         }
     }
 
+    /**
+     * Use this in conjunction with this.currentLine().    Line numbers start with 1, as all text-editors show.  If there is an error in the file being processed, the error-message will note the line#.
+     * @return the line # within the process that is 'current'.  It will be -1, if anything failed in 'reading in' the fileName.
+     */
+    public int getLineNum()  {
+        return this.currentLineNum;
+    }
+
+    /**
+     * What was the file that class has ingested for processing
+     * @return the fileName exactly as passed to go() method.
+     */
+    public String getFileName()  {
+        return this.fileName;
+    }
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /**
      * For reading Properties, it is useful to return a KVPair.. from functions like isPropertyLine()
@@ -197,17 +229,20 @@ public class ConfigFileProcessor {
     }
 
     //==================================
+
     /** This function helps detect if the current line pointed to by this.currentLine() contains a property entry (a.k.a. a KVPair entry of the form key=value)
      * @return either null.. or, the Key + Value (an instance of the ConfigFileProcessor.KVPair class) detected in the current line of batch file
      */
     public KVPair isPropertyLine() {
+        if ( this.bIsPropertyLine ) return this.kv; // we've already executed the code below - SPECIFICALLY for the currentLine!
+
         final String line = this.currentLine(); // remember the line is most likely already trimmed
         if ( line == null )
             return null;
 
-        KVPair kv = null;
+        this.kv = null;
         try {
-            Pattern propsPattern = Pattern.compile( "^\\s*([a-zA-Z][a-zA-Z0-9]*)=(\\S\\S*)\\s*$" ); // empty line
+            Pattern propsPattern = Pattern.compile( "^\\s*properties \\s*([a-zA-Z][a-zA-Z0-9]*)=(\\S\\S*)\\s*$" ); // empty line
             Matcher propsMatcher    = propsPattern.matcher( line );
             if (propsMatcher.find()) {
                 // System.out.println( CLASSNAME +": I found the text "+ propsMatcher.group() +" starting at index "+  propsMatcher.start() +" and ending at index "+ propsMatcher.end() );    
@@ -215,10 +250,12 @@ public class ConfigFileProcessor {
                 kv.key = propsMatcher.group(1); // line.substring( propsMatcher.start(), propsMatcher.end() );
                 kv.value = propsMatcher.group(2);
                 System.out.println( "\t KVPair=[" + kv.key +","+ kv.value +"]" );
+                this.bIsPropertyLine = true;
             }
-		} catch (PatternSyntaxException e) {
-			System.err.println(CLASSNAME + ": isPropertyLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
+
+        } catch (PatternSyntaxException e) {
 			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": isPropertyLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
         }
 
@@ -226,34 +263,45 @@ public class ConfigFileProcessor {
     }
 
     //==================================
-    /** This function helps detect if the current line pointed to by this.currentLine() contains a 'saveAs ___' entry
-     *  @return String the argument provided to the saveAs command (if no argument provided, this returns null - quiet &amp; graceful degradation)
+    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
+    private String sa = null;
+
+    /** This function helps detect if the current line pointed to by this.currentLine() contains a 'saveTo ___' entry
+     *  @return String the argument provided to the saveTo command (if no argument provided, this returns null - quiet &amp; graceful degradation)
      */
-    public String isSaveAsLine() {
+    public String isSaveToLine() {
+        if ( this.bIsSaveToLine ) return this.sa;
+
         final String line = this.currentLine(); // remember the line is most likely already trimmed
         if ( line == null ) return null;
         try {
-            Pattern saveAsPattern = Pattern.compile( "^\\s*saveAs\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-            Matcher saveAsMatcher    = saveAsPattern.matcher( line );
-            if (saveAsMatcher.find()) {
-                // System.out.println( CLASSNAME +": I found the text "+ saveAsMatcher.group() +" starting at index "+  saveAsMatcher.start() +" and ending at index "+ saveAsMatcher.end() );    
-                final String sa = saveAsMatcher.group(1); // line.substring( saveAsMatcher.start(), saveAsMatcher.end() );
-                System.out.println( "\t SaveAs=[" + sa +"]" );
-                return sa;
+            Pattern saveToPattern = Pattern.compile( "^\\s*saveTo\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
+            Matcher saveToMatcher    = saveToPattern.matcher( line );
+            if (saveToMatcher.find()) {
+                // System.out.println( CLASSNAME +": I found the text "+ saveToMatcher.group() +" starting at index "+  saveToMatcher.start() +" and ending at index "+ saveToMatcher.end() );    
+                this.sa = saveToMatcher.group(1); // line.substring( saveToMatcher.start(), saveToMatcher.end() );
+                System.out.println( "\t SaveTo=[" + this.sa +"]" );
+                this.bIsSaveToLine = true;
+                return this.sa;
             }
-		} catch (PatternSyntaxException e) {
-			System.err.println(CLASSNAME + ": isSaveAsLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
+        } catch (PatternSyntaxException e) {
 			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": isSaveToLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
         }
         return null;
     }
 
     //==================================
+    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
+    private String uai = null;
+
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'useAsInput ___' entry
      *  @return String the argument provided to the useAsInput command (if no argument provided, this returns null - quiet &amp; graceful degradation)
      */
     public String isUseAsInputLine() {
+        if ( this.bIsUseAsInputLine ) return this.uai;
+
         final String line = this.currentLine(); // remember the line is most likely already trimmed
         if ( line == null ) return null;
         try {
@@ -261,13 +309,44 @@ public class ConfigFileProcessor {
             Matcher useAsInputMatcher    = useAsInputPattern.matcher( line );
             if (useAsInputMatcher.find()) {
                 // System.out.println( CLASSNAME +": I found the text "+ useAsInputMatcher.group() +" starting at index "+  useAsInputMatcher.start() +" and ending at index "+ useAsInputMatcher.end() );    
-                final String sa = useAsInputMatcher.group(1); // line.substring( useAsInputMatcher.start(), useAsInputMatcher.end() );
-                System.out.println( "\t useAsInput=[" + sa +"]" );
-                return sa;
+                this.uai = useAsInputMatcher.group(1); // line.substring( useAsInputMatcher.start(), useAsInputMatcher.end() );
+                System.out.println( "\t useAsInput=[" + this.uai +"]" );
+                this.bIsUseAsInputLine = true;
+                return this.uai;
             }
 		} catch (PatternSyntaxException e) {
-			System.err.println(CLASSNAME + ": isUseAsInputLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": isUseAsInputLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
+			System.exit(91); // This is a serious failure. Shouldn't be happening.
+        }
+        return null;
+    }
+
+    //==================================
+    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
+    private String sbl = null;
+
+    /** This function helps detect if the current line pointed to by this.currentLine() contains a 'batch ___' entry - which will cause a SUB-BATCH cmd to be triggered
+     *  @return String the argument provided to the Batch command (if no argument provided, this returns null - quiet &amp; graceful degradation)
+     */
+    public String isSubBatchLine() {
+        if ( this.bIsBatchLine ) return this.sbl;
+
+        final String line = this.currentLine(); // remember the line is most likely already trimmed
+        if ( line == null ) return null;
+        try {
+            Pattern batchPattern = Pattern.compile( "^\\s*batch\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
+            Matcher batchMatcher    = batchPattern.matcher( line );
+            if (batchMatcher.find()) {
+                // System.out.println( CLASSNAME +": I found the text "+ batchMatcher.group() +" starting at index "+  batchMatcher.start() +" and ending at index "+ batchMatcher.end() );    
+                this.sbl = batchMatcher.group(1); // line.substring( batchMatcher.start(), batchMatcher.end() );
+                System.out.println( "\t batch=[" + this.sbl +"]" );
+                this.bIsBatchLine = true;
+                return this.sbl;
+            }
+        } catch (PatternSyntaxException e) {
+			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": isBatchLine(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
         }
         return null;
@@ -279,9 +358,13 @@ public class ConfigFileProcessor {
      * @return true of false, if 'foreach' was detected in the current line of batch file
      */
     public boolean isForEachLine() {
+        // if ( this.bIsForEachLine ) return true; // I do NOT want to be too overconfident about these boolean class-variables, especially when the logic in this function is SO SIMPLE!
+
         final String line = this.currentLine(); // remember the line is most likely already trimmed
         if ( line == null ) return false;
-        return line.equalsIgnoreCase("foreach");
+        final boolean b = line.equalsIgnoreCase("foreach");
+        this.bIsForEachLine = b;
+        return b;
     }
 
     //==================================
@@ -290,32 +373,43 @@ public class ConfigFileProcessor {
      * @return true of false, if 'end' was detected in the current line of batch file
      */
     public boolean isEndLine() {
+        // if ( this.bIsEndLine ) return true; // I do NOT want to be too overconfident about these boolean class-variables, especially when the logic in this function is SO SIMPLE!
+
         final String line = this.currentLine(); // remember the line is most likely already trimmed
         if ( line == null ) return false;
-        return line.equalsIgnoreCase("end");
+        final boolean b = line.equalsIgnoreCase("end");
+        this.bIsEndLine = b;
+        return b;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /**
      * This function should be called *AFTER* all the various is___() functions/methods have been called.
-     * This function should NOT be called BEFORE isSaveAs() and isUseAsInput(), as this function will get you confused.
+     * This function should NOT be called BEFORE isSaveToLine() and isUseAsInputLine(), as this function will get you confused.
      * @return String just for the command (whether 'yaml' 'aws' ..)
      */
     public String getCommand() {
+        if ( this.bIsPropertyLine ||  this.bIsSaveToLine ||  this.bIsUseAsInputLine || this.bIsForEachLine || this.bIsEndLine || this.bIsBatchLine )
+            return null; // It can't a generic command like YAML or AWS..
+
         try {
             final java.util.Scanner scanner = new java.util.Scanner( this.currentLine() );
             scanner.useDelimiter("\\s\\s*");
+
             if (scanner.hasNext()) { // default whitespace delimiter used by a scanner
                 final String cmd = scanner.next();
                 System.out.println( "\t Command=[" + cmd +"]" );
+                scanner.close();
                 return cmd;
             } // if
+
+            scanner.close();
             return null;
             // scanner.hasNext() only throws a RUNTIMEEXCEPTION: IllegalStateException - if this scanner is closed
             // scanner.next() only throws a RUNTIMEEXCEPTION: NoSuchElementException - if no more tokens are available
 		} catch (Exception e) {
-			System.err.println(CLASSNAME + ": getCommand(): Unexpected Internal ERROR, while checking for patterns for this.currentLine()= [" + this.currentLine() +"]" );
 			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": getCommand(): Unexpected Internal ERROR, while checking for patterns for line # "+ this.currentLineNum +"this.currentLine()= [" + this.currentLine() +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
             return null;
         }
@@ -332,31 +426,53 @@ public class ConfigFileProcessor {
     /** This class aims to mimic java.util.Scanner's hasNextLine() and nextLine() and reset().<br>reset() has draconian-implications - as if openBatchFile() was never called!
      */
     public void reset() {
+        this.fileName = null;
         this.lines = new ArrayList<>();
+        this.currentLine = null;
+        this.currentLineNum = -1;
         this.iterator = null;
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    /** This function is exclusively for use within the go() - the primary function within this class - to make this very efficient when responding to the many isXXX() methods in this class.
+     */
+    private void resetFlagsForEachLine() {
+        this.bIsPropertyLine = false;
+        this.bIsSaveToLine = false;
+        this.bIsUseAsInputLine = false;
+        this.bIsForEachLine = false;
+        this.bIsEndLine = false;
+        this.bIsBatchLine = false;
+
+        this.kv = null;
+    }
+
+        //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // For unit-testing purposes only
     public static void main(String[] args) {
-        final ConfigFileProcessor o = new ConfigFileProcessor(false);
-        o.openFile(args[0], true);
-        while (o.hasNextLine()) {
-            System.out.println(o.nextLine());
+        try {
+            final ConfigFileProcessor o = new ConfigFileProcessor(false);
+            o.openFile( args[0], true );
+            while (o.hasNextLine()) {
+                System.out.println(o.nextLine());
 
-            o.isPropertyLine();
-            final KVPair kv = o.isPropertyLine(); // could be null, implying NOT a kvpair
+                o.isPropertyLine();
+                final KVPair kv = o.isPropertyLine(); // could be null, implying NOT a kvpair
 
-            o.isForEachLine();
-            o.isEndLine();
-            o.isSaveAsLine();
-            o.isUseAsInputLine();
-            final boolean bForEach = o.isForEachLine();
-            if ( bForEach ) System.out.println("\t Loop begins=[" + bForEach + "]");
-            final boolean bEndLine = o.isEndLine();
-            if ( bEndLine ) System.out.println("\t Loop ENDS=[" + bEndLine + "]");
+                o.isForEachLine();
+                o.isEndLine();
+                o.isSaveToLine();
+                o.isUseAsInputLine();
+                final boolean bForEach = o.isForEachLine();
+                if ( bForEach ) System.out.println("\t Loop begins=[" + bForEach + "]");
+                final boolean bEndLine = o.isEndLine();
+                if ( bEndLine ) System.out.println("\t Loop ENDS=[" + bEndLine + "]");
 
-            o.getCommand();
+                o.getCommand();
+            }
+		} catch (Exception e) {
+			e.printStackTrace(System.err);
+			System.err.println(CLASSNAME + ": main(): Unexpected Internal ERROR, while processing " + ((args==null || args.length<=0)?"[No CmdLine Args":args[0]) +"]" );
+			System.exit(91); // This is a serious failure. Shouldn't be happening.
         }
     }
 
