@@ -32,7 +32,7 @@
 
 package org.ASUX.yaml;
 
-import java.io.StringBufferInputStream;
+// import java.io.StringBufferInputStream;
 //import java.util.Map;
 //import java.util.LinkedList;
 //import java.util.ArrayList;
@@ -79,7 +79,7 @@ public class Tools {
         final String s = _key +": "+ quotedStr +"\n";
         try {
             @SuppressWarnings("deprecated")
-            final java.io.InputStream is2 = new java.io.StringBufferInputStream( s );
+            final java.io.InputStream is2 = null; // new java.io.StringBufferInputStream( s ); <<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
             final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
             @SuppressWarnings("unchecked")
             final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
@@ -146,7 +146,7 @@ public class Tools {
             s = _key +":\n"+ rhsstrIndented +"\n";
             // System.err.println( CLASSNAME + ": s = " + s +"\n\n" );
 
-            final java.io.InputStream is2 = new java.io.StringBufferInputStream( s );
+            final java.io.InputStream is2 = null; // new java.io.StringBufferInputStream( s ); <<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
             final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
             @SuppressWarnings("unchecked")
             final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
