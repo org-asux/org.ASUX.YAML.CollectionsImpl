@@ -113,8 +113,15 @@ public class BatchFileGrammer implements java.io.Serializable {
 
         String line = null;
         try {
-            final java.io.InputStream istrm = new java.io.FileInputStream( this.fileName );
-            // final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+            java.util.Scanner scanner = null;
+            if ( this.fileName.startsWith("@") ) {
+                final java.io.InputStream istrm = new java.io.FileInputStream( this.fileName.substring(1) );
+                // final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+                scanner = new java.util.Scanner( istrm );
+            } else {
+                scanner = new java.util.Scanner( this.fileName );
+            }
+
             if ( this.verbose ) System.out.println( CLASSNAME + ": openBatchFile(): successfully opened file [" + this.fileName +"]" );
 
             // different way to detect comments, and to remove them.
@@ -125,7 +132,6 @@ public class BatchFileGrammer implements java.io.Serializable {
 			Pattern slashPattern        = Pattern.compile(  "\\s*//.*" );
 			Pattern dashlinepattern = Pattern.compile( "^--.*" );
 
-            final java.util.Scanner scanner = new java.util.Scanner( istrm );
             while (scanner.hasNextLine()) {
                 if ( this.currentLineNum < 0 ) this.currentLineNum = 1; else this.currentLineNum ++;
                 line = scanner.nextLine();
@@ -163,7 +169,7 @@ public class BatchFileGrammer implements java.io.Serializable {
                 this.lines.add( line );
             }
             scanner.close();
-            istrm.close();
+            // istrm.close(); not possible anymore... :-) as we've to support inline-String or @filename options for --batch command
 
             this.rewind(); // rewing the pointer to the 1st line in the batch file.
             return true;
