@@ -59,6 +59,8 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     protected Object replacementData = "";
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // see if you can have ths implement the interface BiConsumer<T,U>
+    // https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html
     public class Tuple<X, Y> {
         public final X key;
         public final Y map;
