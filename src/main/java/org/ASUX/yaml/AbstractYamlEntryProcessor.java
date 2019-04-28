@@ -296,7 +296,7 @@ public abstract class AbstractYamlEntryProcessor {
                             bMatchAny = true;
                             bLetsIterate = true;
                         } else {
-                            if ( lookForwardYAMLPath.get().matches( "[0-9][0-9]*" ) ) {
+                            if ( lookForwardYAMLPath.get().matches( "\\[?[0-9][0-9]*\\]?" ) ) {
                                 // Clearly.. We should definitely check out each item in the array 
                                 // Make 'nonStarLookFwdYAMLPath' point to the YAML-Path-Pattern-element !!!that exists RIGHT AFTER!!! the 0
                                 nonStarLookFwdYAMLPath = YAMLPath.deepClone(lookForwardYAMLPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
@@ -320,6 +320,7 @@ public abstract class AbstractYamlEntryProcessor {
 
                         // if have a '**' or *' for current path-element..  variable 'upcomingPathElem' will point to the next yaml-element within the YAML-Path-PATTERN is.
                         // otherwise variable 'upcomingPathElem' will point to CURRENT yaml-element.
+                        if ( this.verbose ) System.out.println(CLASSNAME +": bWildcard="+ bWildcard +" bMatchAny="+ bMatchAny +" upcomingPathElem="+ upcomingPathElem +" ix="+ix );
 
                         if ( bWildcard || bMatchAny || Integer.valueOf(ix).toString().matches(upcomingPathElem) ) {
                             if (   !   nonStarLookFwdYAMLPath.hasNext() ) {
