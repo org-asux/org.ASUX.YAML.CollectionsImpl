@@ -197,7 +197,7 @@ public class Cmd {
             } else {
             }
 
-            if (cmdLineArgs.isDelCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd) {
+            if (cmdLineArgs.isDelCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd || cmdLineArgs.isBatchCmd ) {
                 if (writer != null) {
                     if ( output instanceof LinkedHashMap) {
                         @SuppressWarnings("unchecked")
@@ -304,7 +304,7 @@ public class Cmd {
             } else {
                 // user provided a FILE for replacement-content (instead of a simple-string)
                 try {
-                    final java.io.InputStream is2 = new java.io.FileInputStream( _cmdLineArgs.replaceFilePath.substring(1)); // remove '@' as the 1st character in the user's input
+                    final java.io.InputStream is2 = new java.io.FileInputStream( _cmdLineArgs.replaceFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
                     final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
                     // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file
                     // contents into a java.util.LinkedHashMap<String, Object>
@@ -322,7 +322,19 @@ public class Cmd {
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return _data;
 
-        } else if ( _cmdLineArgs.isMacroCmd ) {
+        // This (below) WILL NOT work .. as the --inputfile has already been opened for READING !!as YAML-content!! by Cmd.main, and it will throw error as JSON file is NOT in YAML format.
+        // instead: we've a simple workaround: Instead of asux yaml fromJSON <jsonFile> -o -
+        //      .. Simply do:    asux yaml batch 'useAsInput <jsonFile>' -i /dev/null -o -
+        // } else if ( _cmdLineArgs.isFromJSONCmd ) {
+        //     final java.io.InputStream is3 = new java.io.FileInputStream( _cmdLineArgs.inputFilePath ); // remove '@' as the 1st character in the user's input
+        //     final java.io.Reader reader3 = new java.io.InputStreamReader(is3);
+        //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+        //     final LinkedHashMap<String, Object> retMap = new com.google.gson.Gson().fromJson(
+        //                     reader3,
+        //                     new TypeToken< LinkedHashMap<String, Object> >() {}.getType()
+        //                 );
+
+    } else if ( _cmdLineArgs.isMacroCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             final Properties properties = new Properties();
             if (_cmdLineArgs.propertiesFilePath != null) {
@@ -342,7 +354,7 @@ public class Cmd {
             LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
             batcher.go( _cmdLineArgs.batchFilePath, _data, outpMap );
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
-            return null;
+            return outpMap;
 
         } else {
             final String es = CLASSNAME + ": processCommand(): Unimplemented command: " + _cmdLineArgs.toString();
