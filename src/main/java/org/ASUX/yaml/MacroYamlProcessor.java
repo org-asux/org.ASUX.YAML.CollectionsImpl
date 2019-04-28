@@ -69,6 +69,12 @@ public class MacroYamlProcessor {
         this.verbose = false;
     }
 
+    //------------------------------------------------------------------------------
+    public static class MacroException extends Exception {
+        private static final long serialVersionUID = 2L;
+        public MacroException(String _s) { super(_s); }
+    }
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
@@ -79,12 +85,13 @@ public class MacroYamlProcessor {
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
      *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
      */
     public boolean recursiveSearch(
             final LinkedHashMap<String, Object> _inpMap,
 			final LinkedHashMap<String,Object> _outpMap,
 			final Properties _props
-    ) throws com.esotericsoftware.yamlbeans.YamlException {
+    ) throws com.esotericsoftware.yamlbeans.YamlException, MacroYamlProcessor.MacroException {
 
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
 
@@ -173,6 +180,7 @@ public class MacroYamlProcessor {
 	//------------------------------------------------------------------
 	public static final String pattStr = "[$]\\{ASUX::([^}]+)\\}";
 
+	//------------------------------------------------------------------
 	/**
 	 * <p>Pass in a string as 1st parameter and a properties file as 2nd parameter.</p>
 	 * <p>All instances of ${ASUX::___} are replaced with values for ___ (within Properties instance).</p>
@@ -180,14 +188,15 @@ public class MacroYamlProcessor {
 	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
 	 * @param _props a java.util.Properties object (null will mean function returns immediately)
 	 * @return the original string as-is (if no macros were detected).. or the altered version
+	 * @throw MacroYamlProcessor.MacroException if ANY failure in evaluating the macro on the input _s
 	 */
-	public static String evaluateMacros( final String _s, final Properties _props) {
+	public static String evaluateMacros( final String _s, final Properties _props) throws MacroYamlProcessor.MacroException {
 		if (_s==null) return null;
 		if (_props==null) return _s;
 
 		try {
 
-			Pattern pattern = Pattern.compile( pattStr );
+			Pattern pattern = Pattern.compile( MacroYamlProcessor.pattStr );
 			Matcher matcher = pattern.matcher( _s );
 
 			boolean found = false;
@@ -217,21 +226,27 @@ public class MacroYamlProcessor {
 			}
 
 		} catch (PatternSyntaxException e) {
-			System.err.println(CLASSNAME + ": Unexpected Internal ERROR, while checking if '" + _s + "' matches pattern " + pattStr);
 			e.printStackTrace(System.err);
-			System.exit(91); // This is a serious failure. Shouldn't be happening.
+			final String s = " checking if '" + _s + "' matches pattern " + MacroYamlProcessor.pattStr;
+			System.err.println(CLASSNAME + ": Unexpected Internal ERROR: " + s );
+			throw new MacroException( s );
+			// System.exit(91); // This is a serious failure. Shouldn't be happening.
 		}
 
-		return _s; // program control should never get here.
+		// return _s; // program control should never get here.
 	} // function
 
+	//------------------------------------------------------------------
 	/**
 	 * This is a variant of evaluateMacros(), to support Batch-Cmd mode, where BatchFile can load MULTIPLE property-files
 	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
 	 * @param _props a java.util.Properties object (null will mean function returns immediately)
 	 * @return the original string as-is (if no macros were detected).. or the altered version
+	 * @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
 	 */
-	public static String evaluateMacros( final String _s, final LinkedHashMap<String,Properties> _propsSet ) {
+	public static String evaluateMacros( final String _s, final LinkedHashMap<String,Properties> _propsSet )
+						throws MacroYamlProcessor.MacroException
+	{
 		for( String key: _propsSet.keySet() ) {
 			final Properties p = _propsSet.get(key);
 			final String rstr = evaluateMacros(_s, p);
