@@ -51,6 +51,8 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // see if you can have ths implement the interface BiConsumer<T,U>
+    // https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html
     public class Tuple<X, Y> {
         public final X key;
         public final Y map;
