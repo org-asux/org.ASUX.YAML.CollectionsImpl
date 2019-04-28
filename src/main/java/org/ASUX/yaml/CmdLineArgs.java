@@ -57,7 +57,7 @@ public class CmdLineArgs {
     private static final String REPLACECMD = "replace";
     // private static final char REPLACECMDCHAR = 'c'; // -c === --replace
     private static final String MACROCMD = "macro";
-    private static final String BATCHCMD = "macro";
+    private static final String BATCHCMD = "batch";
 
     private static final String INPUTFILE = "inputfile";
     private static final String OUTPUTFILE = "outputfile";
