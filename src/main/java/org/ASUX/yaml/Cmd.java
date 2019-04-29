@@ -151,12 +151,7 @@ public class Cmd {
                     : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
             // WARNING!!! com.esotericsoftware.yamlbeans.YamlWriter takes over stdout, and it will STOP working for all System.out.println();
 
-            // writer.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
-            writer.getConfig().writeConfig.setWriteClassname(com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER); // I hate !<pkg.className> within YAML files. So does AWS I believe.
-            // writer.getConfig().writeConfig.setQuoteChar( cmdLineArgs.quoteType );
-            // writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE );
-            // writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE );
-            // writer.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE );
+            Tools.defaultConfigurationForYamlWriter( writer );
 
             // -----------------------
             // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file-contents into a java.util.LinkedHashMap<String, Object>
