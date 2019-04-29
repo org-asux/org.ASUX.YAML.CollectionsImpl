@@ -38,9 +38,12 @@ import java.io.InputStreamReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+
 import java.util.Properties;
 import java.util.Set;
 
@@ -109,10 +112,10 @@ public class BatchYamlProcessor {
 
                 if ( this.verbose ) System.out.println( CLASSNAME + ": go(): successfully opened _batchFileName [" + _batchFileName +"]" );
 
-                final LinkedHashMap<String, Object>  retMap = this.processBatch( false, batchCmds, _inputMap );
-                if ( this.verbose ) System.out.println( CLASSNAME +" go():  retMap =" + retMap +"\n\n");
+                final LinkedHashMap<String, Object>  retMap1 = this.processBatch( false, batchCmds, _inputMap );
+                if ( this.verbose ) System.out.println( CLASSNAME +" go():  retMap1 =" + retMap1 +"\n\n");
 
-                _returnedMap.putAll( retMap );
+                _returnedMap.putAll( retMap1 );
                 // System.out.println( CLASSNAME +" go():  _returnedMap =" + _returnedMap +"\n\n");
                 return true; // all ok
 
@@ -201,58 +204,21 @@ public class BatchYamlProcessor {
             if ( printLine != null ) {
                 final String outputStr = MacroYamlProcessor.evaluateMacros( printLine, this.AllProps );
                 System.out.println( outputStr );
-                // throw new MacroYamlProcessor.MacroException("ERROR In Batchfile ["+ _batchCmds.getFileName() +"] @ lime# "+ _batchCmds.getLineNum() +".  Significant errors while printing (incl. Macros) the expression in the print-line: [" + printLine +"]");
                 tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
             }
 
             //------------------------------------------------
-            // Might sound crazy.  inpMap for this 'saveAs' command is the output of prior command.  Hence we write(inpMap)
+            // Might sound crazy - at first.  inpMap for this 'saveAs' command is the output of prior command.
             final String saveTo_AsIs = _batchCmds.isSaveToLine();
             if ( saveTo_AsIs != null ) {
-                final String saveTo = MacroYamlProcessor.evaluateMacros( saveTo_AsIs, this.AllProps );
-                savedOutputMaps.put( saveTo, inputMap );
-                if ( saveTo.startsWith("@") ) {
-                    final String saveToFile = saveTo.substring(1);
-                    final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
-                            = new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter( saveToFile ) );
-                    yamlwriter.write( inputMap );
-                    yamlwriter.close();
-                }
+                processSaveToLine( _batchCmds, inputMap );
                 tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
             }
 
             //------------------------------------------------
             final String inputFrom_AsIs = _batchCmds.isUseAsInputLine();
             if ( inputFrom_AsIs != null ) {
-                final String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
-                inputMap = savedOutputMaps.get( inputFrom );
-                // we might be 'double-loading' inputMap - once from memory and 2nd-time from the file (heck, why not.)
-                if ( inputFrom.startsWith("@") ) {
-                    final String inputFromFile = inputFrom.substring(1);
-                    final InputStream fs = new FileInputStream( inputFromFile );
-                    if ( inputFromFile.endsWith(".json") ) {
-                        //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
-                        // final LinkedHashMap<String, Object> retMap = ..
-                        // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
-                        //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
-                        // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
-                        com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                        com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
-                        tempOutputMap = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
-                        if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(inputAsIs): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + tempOutputMap );
-                        fs.close();
-                    }
-                    if ( inputFromFile.endsWith(".yaml") ) {
-                        final java.io.Reader reader1 = new InputStreamReader( fs  );
-                        final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
-                        @SuppressWarnings("unchecked")
-                        final LinkedHashMap<String, Object> mp = (LinkedHashMap<String, Object>) mapObj;
-                        tempOutputMap = mp; // I can't use SuppressWarnings if I'm assigning to an existing variable.
-                        reader1.close();
-                        // if ( this.verbose ) 
-System.out.println( CLASSNAME +" processBatch(inputAsIs): YAML loaded into tempOutputMap =" + tempOutputMap );
-                    }
-                }
+                tempOutputMap = processUseAsInputLine( _batchCmds );
             }
 
             //------------------------------------------------
@@ -369,17 +335,8 @@ System.out.println( CLASSNAME +" processBatch(inputAsIs): YAML loaded into tempO
             //------------------------------------------------
             final String cmd_AsIs = _batchCmds.getCommand();
             if ( cmd_AsIs != null ) {
-System.err.println( CLASSNAME +" processBatch(any-cmd): INCOMPLETE CODE .. SHOULD NOT BE HERE !!!!!!!!!!!!!!!!!!! =" + cmd_AsIs );
-                final String cmd = MacroYamlProcessor.evaluateMacros( cmd_AsIs, this.AllProps );
-                // https://mvnrepository.com/artifact/com.opencsv/opencsv
-                com.opencsv.CSVReader cmdLineParser = new com.opencsv.CSVReader( new java.io.StringReader(cmd) );
-                final String [] cmdLineArgs = cmdLineParser.readNext();
-                Cmd.main( cmdLineArgs );
-
-
-                // for now.. .. until above code is fleshed out
-                tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
-            }
+                tempOutputMap = processYAMLCommand( _batchCmds, inputMap );
+            } // if BatchCmd
 
             inputMap = tempOutputMap; // because we might be doing ANOTHER iteraton of the While() loop.
 
@@ -391,6 +348,8 @@ System.err.println( CLASSNAME +" processBatch(any-cmd): INCOMPLETE CODE .. SHOUL
     }
 
     //-----------------------------------------------------------------------------
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //-----------------------------------------------------------------------------
 
     /**
      * This function is a simpler variant of processBatch(), in that it takes NO Map as input, and is unlikely (but can) return a Map back.
@@ -398,42 +357,31 @@ System.err.println( CLASSNAME +" processBatch(any-cmd): INCOMPLETE CODE .. SHOUL
      * @param _batchCmds pass-on the object BatchFileGrammer - as defined within processBatch()
      * @param _s the string value to process further n this function
      * @return After this function completes processing SUCCESSFULLY.. it returns a java.utils.LinkedHashMap&lt;String, Object&gt; object.  If there is any failure, either return value is NULL or an Exception is thrown.
-     * @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
+     * @throws org.ASUX.yaml.BatchYamlProcessor.BatchFileException if any failure trying to execute any entry in the batch file.  Batch file processing will Not proceed once a problem occurs.
+     * @throws org.ASUX.yaml.MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
      * @throws FileNotFoundException if the batch file to be loaded does Not exist
      * @throws java.io.IOException any problems reading or writing Sub-batch file or a property file or a file specified by saveAs/useAsInput
      */
     public LinkedHashMap<String, Object> processBatch_StringsOnly( final BatchFileGrammer _batchCmds, final String _s )
-                        throws MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException
+                        throws BatchFileException, MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException
     {
 
         // WARNING: THIS IS NOT NEGOTIABLE .. I do NOT (can NOT) have an Input Map as parameter !!!!!!!!!!!!!!!!!!!!!
 
         LinkedHashMap<String, Object> inputMap = null;
-        LinkedHashMap<String, Object> retMap = null;
+        LinkedHashMap<String, Object> tempOutputMap = null;
         final Properties forLoopProps = this.AllProps.get( BatchFileGrammer.FOREACH );
         forLoopProps.setProperty( BatchFileGrammer.FOREACH_ITER_VALUE, _s );
 
         while ( _batchCmds.hasNextLine() ) {
 
-            // if ( this.verbose ) 
-            System.out.println( CLASSNAME +" processBatch_StringsOnly(while-loop): "+ _batchCmds.nextLine());
+            if ( this.verbose ) System.out.println( CLASSNAME +" processBatch_StringsOnly(while-loop): "+ _batchCmds.nextLine());
 
             final String line = _batchCmds.nextLine();
             // start each loop, with an 'empty' placeholder Map, to collect output of current batch command
-            retMap = new LinkedHashMap<String, Object>();
+            tempOutputMap = new LinkedHashMap<String, Object>();
 
-            // if ( this.verbose ) 
-            System.out.println( CLASSNAME +" processBatch_StringsOnly(while-loop): @ Batch-line# "+" @ line# "+ _batchCmds.getLineNum() +" = ["+ _batchCmds.currentLine() +"]" );
-
-            //------------------------------------------------
-            final String bSubBatch_AsIs = _batchCmds.isSubBatchLine();
-            final String bSubBatch = MacroYamlProcessor.evaluateMacros( bSubBatch_AsIs, this.AllProps );
-            if ( bSubBatch != null ) {
-                LinkedHashMap<String,Object> temp222OutputMap = new LinkedHashMap<String,Object> ();
-                this.go( bSubBatch, inputMap, temp222OutputMap);  
-                // technically, this.go() method is NOT meant to used recursively.  Semantically, this is NOT recursion :-(
-                retMap.putAll( temp222OutputMap );
-            }
+            if ( this.verbose ) System.out.println( CLASSNAME +" processBatch_StringsOnly(while-loop): @ Batch-line# "+" @ line# "+ _batchCmds.getLineNum() +" = ["+ _batchCmds.currentLine() +"]" );
 
             //------------------------------------------------
             final BatchFileGrammer.KVPair kv = _batchCmds.isPropertyLine(); // could be null, implying NOT a kvpair
@@ -441,36 +389,184 @@ System.err.println( CLASSNAME +" processBatch(any-cmd): INCOMPLETE CODE .. SHOUL
                 final Properties props = new Properties();
                 final String fn = MacroYamlProcessor.evaluateMacros( kv.value, this.AllProps );
                 props.load( new FileInputStream( fn ) );
-                if ( this.verbose ) System.out.print("props 2 @@@@@@@@@@@@@@@@@@@@@@@@@ >> "); props.list(System.out);
                 this.AllProps.put( kv.key, props ); // This line is the action taken by this 'PropertyFile' line of the batchfile
-                if ( this.verbose ) this.printAllProps( CLASSNAME +" processBatch_StringsOnly(load-properties): " +" - AFTER " );
-                retMap = inputMap; // as nothing changes re: Input and Output Maps.
+                tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
             }
 
-            //------------------------------------------------
             final String printLine = _batchCmds.isPrintLine();
-            if ( this.verbose ) System.out.println( CLASSNAME +" processBatch_StringsOnly(isPrintLine): \t print command=[" + printLine + "]");
             if ( printLine != null ) {
                 final String outputStr = MacroYamlProcessor.evaluateMacros( printLine, this.AllProps );
                 System.out.println( outputStr );
-                // throw new MacroYamlProcessor.MacroException("ERROR In Batchfile ["+ _batchCmds.getFileName() +"] @ lime# "+ _batchCmds.getLineNum() +".  Significant errors while printing (incl. Macros) the expression in the print-line: [" + printLine +"]");
-                retMap = inputMap; // as nothing changes re: Input and Output Maps.
+                tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
             }
 
-            //------------------------------------------------
+            final String saveTo_AsIs = _batchCmds.isSaveToLine();
+            if ( saveTo_AsIs != null ) {
+                processSaveToLine( _batchCmds, inputMap );
+                tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
+            }
+
+            final String inputFrom_AsIs = _batchCmds.isUseAsInputLine();
+            if ( inputFrom_AsIs != null ) {
+                tempOutputMap = processUseAsInputLine( _batchCmds );
+            }
+
+            final String bSubBatch_AsIs = _batchCmds.isSubBatchLine();
+            if ( bSubBatch_AsIs != null ) {
+                final String bSubBatch = MacroYamlProcessor.evaluateMacros( bSubBatch_AsIs, this.AllProps );
+                this.go( bSubBatch, inputMap, tempOutputMap );
+            }
+
             final String cmd_AsIs = _batchCmds.getCommand();
-            final String cmd = MacroYamlProcessor.evaluateMacros( cmd_AsIs, this.AllProps );
-            if ( cmd != null ) {
-                retMap = inputMap; // as nothing changes re: Input and Output Maps.
-            }
+            if ( cmd_AsIs != null ) {
+                tempOutputMap = processYAMLCommand( _batchCmds, inputMap );
+            } // if BatchCmd
 
-            inputMap = retMap; // because we might be doing ANOTHER iteraton of the While() loop.
+            inputMap = tempOutputMap; // because we might be doing ANOTHER iteraton of the While() loop.
 
         } // while loop
 
         // reached end of file.
-        return retMap;
+        return tempOutputMap;
     }
+
+    //-----------------------------------------------------------------------------
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //-----------------------------------------------------------------------------
+
+    private void processSaveToLine( final BatchFileGrammer _batchCmds, final LinkedHashMap<String, Object> _inputMap )
+                                    throws MacroYamlProcessor.MacroException,  java.io.IOException,
+                                    com.esotericsoftware.yamlbeans.YamlException
+    {
+        final String saveTo_AsIs = _batchCmds.isSaveToLine();
+        if ( saveTo_AsIs != null ) {
+            final String saveTo = MacroYamlProcessor.evaluateMacros( saveTo_AsIs, this.AllProps );
+            if ( saveTo.startsWith("@") ) {
+                final String saveToFile = saveTo.substring(1);
+                final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
+                        = new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter( saveToFile ) );
+                yamlwriter.write( _inputMap );
+                yamlwriter.close();
+            } else {
+                savedOutputMaps.put( saveTo, _inputMap );
+            }
+        }
+    }
+
+    private LinkedHashMap<String, Object> processUseAsInputLine( final BatchFileGrammer _batchCmds )
+                                throws MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException,
+                                com.esotericsoftware.yamlbeans.YamlException
+    {
+        final String inputFrom_AsIs = _batchCmds.isUseAsInputLine();
+        final String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
+        if ( inputFrom != null ) {
+            // final LinkedHashMap<String, Object> savedMap = savedOutputMaps.get( inputFrom );
+            // we might be 'double-loading' inputMap - once from memory and 2nd-time from the file (heck, why not.)
+            if ( inputFrom.startsWith("@") ) {
+                final String inputFromFile = inputFrom.substring(1);
+                final InputStream fs = new FileInputStream( inputFromFile );
+                if ( inputFromFile.endsWith(".json") ) {
+                    //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+                    // final LinkedHashMap<String, Object> retMap2 = ..
+                    // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+                    //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+                    com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
+                    LinkedHashMap<String, Object> retMap2 = null;
+                    retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(inputAsIs): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
+                    retMap2 = new Tools(this.verbose).JSON2YAML( retMap2 );
+                    fs.close();
+                    return retMap2;
+                }
+                if ( inputFromFile.endsWith(".yaml") ) {
+                    final java.io.Reader reader1 = new InputStreamReader( fs  );
+                    final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
+                    @SuppressWarnings("unchecked")
+                    final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
+                    reader1.close(); // automatically includes fs.close();
+                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(inputAsIs): YAML loaded into tempOutputMap =" + retMap3 );
+                    return retMap3;
+                }
+                return null; // compiler is complaining about missing return statement.
+            } else {
+                final LinkedHashMap<String, Object> savedMap = savedOutputMaps.get( inputFrom );
+                return savedMap;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    //-----------------------------------------------------------------------------
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //-----------------------------------------------------------------------------
+
+    private LinkedHashMap<String, Object> processYAMLCommand( final BatchFileGrammer _batchCmds, final LinkedHashMap<String, Object> _inputMap )
+                                            throws BatchFileException, MacroYamlProcessor.MacroException, java.io.IOException
+    {
+
+        final String cmd_AsIs = _batchCmds.getCommand();
+        final String cmdStr2 = MacroYamlProcessor.evaluateMacros( cmd_AsIs, this.AllProps ).strip();
+        if ( cmdStr2 == null )
+            return null;
+
+        // https://mvnrepository.com/artifact/com.opencsv/opencsv
+        String cmdStrCompacted = _batchCmds.currentLine().replaceAll("\\s\\s*", " "); // replace multiple spaces with a single space.
+        // cmdStrCompacted = cmdStrCompacted.strip(); // no need.  The _batchCmds already took care of it.
+        cmdStrCompacted += " -i - -o -";
+        if ( this.verbose ) System.out.println( cmdStrCompacted );
+
+        final java.io.StringReader reader = new java.io.StringReader( cmdStrCompacted );
+        final com.opencsv.CSVParser parser = new com.opencsv.CSVParserBuilder().withSeparator(' ').withIgnoreQuotations(false).build();
+        final com.opencsv.CSVReader cmdLineParser = new com.opencsv.CSVReaderBuilder( reader ).withSkipLines(0).withCSVParser( parser ).build();
+        final String [] cmdLineArgs = cmdLineParser.readNext();
+
+        if ( this.verbose ) for( String s: cmdLineArgs ) System.out.println( "\t"+ s );
+        try {
+            CmdLineArgs cmdLineArgsObj = new CmdLineArgs( cmdLineArgs );
+            final Cmd cmd = new Cmd(cmdLineArgsObj.verbose);
+    
+            final Object output = cmd.processCommand( cmdLineArgsObj, _inputMap );
+            if ( this.verbose ) System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>");
+            if ( this.verbose ) System.out.println( _inputMap.toString());
+            if ( this.verbose ) System.out.println( output.getClass().getName());
+            if ( this.verbose ) System.out.println( output.toString());
+            if ( this.verbose ) System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<");
+
+            if ( output instanceof LinkedList ) {
+                @SuppressWarnings("unchecked")
+                final LinkedList<Object> list = ( LinkedList<Object> ) output;
+                // list.forEach( s -> System.out.println( s.toString() ) );
+                final LinkedHashMap<String, Object> retMap = new LinkedHashMap<String, Object>();
+                retMap.put( "output", list );
+                retMap = new Tools(this,verbose).lintRemover(retMap);
+                return retMap;
+
+            } else if ( output instanceof ArrayList ) {
+                @SuppressWarnings("unchecked")
+                final ArrayList<String> arr = ( ArrayList<String> ) output;
+                final LinkedHashMap<String, Object> retMap = new LinkedHashMap<String, Object>();
+                retMap.put( "output", arr );
+                retMap = new Tools(this,verbose).lintRemover(retMap);
+                return retMap;
+
+            } else if ( output instanceof LinkedHashMap) {
+                @SuppressWarnings("unchecked")
+                final LinkedHashMap<String, Object> retMap = (LinkedHashMap<String, Object>) output;
+                // I do Not need to run Tools().lintRemover() as the output of org.ASUX.yaml library stays 100% conformant withe com.esotericsoftware library usage.
+                return retMap;
+
+            } else {
+                throw new BatchFileException( CLASSNAME +" processBatch(org.ASUX.yaml.Cmd.processCommand()): output is Not of type LinkedHashMap.  It's ["+ output.getClass().getName() +"]");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+            throw new BatchFileException("ERROR In Batchfile ["+ _batchCmds.getFileName() +"] @line# "+ _batchCmds.getLineNum() +".. Failed to run the command ["+ _batchCmds.currentLine() +"]");
+        }
+}
 
     //=======================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
