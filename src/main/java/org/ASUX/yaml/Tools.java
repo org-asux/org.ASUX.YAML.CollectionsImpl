@@ -32,9 +32,9 @@
 
 package org.ASUX.yaml;
 
-//import java.util.Map;
-//import java.util.LinkedList;
-//import java.util.ArrayList;
+import java.util.Map;
+import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Properties;
 
@@ -119,6 +119,134 @@ public class Tools {
         }
         return null;
     } // function
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    public static final String ARRAYWRAPPED = "output.array";
+    public static final String LISTWRAPPED = "output.list";
+    public static final String SINGLESTRINGWRAPPED = "output.singleString";
+
+    public LinkedHashMap<String, Object> wrapAnObject_intoLinkedHashMap( final Object output ) throws Exception
+    {
+        if ( output instanceof String ) {
+            @SuppressWarnings("unchecked")
+            final String s = ( String ) output;
+            LinkedHashMap<String, Object> retMap = new LinkedHashMap<String, Object>();
+            retMap.put( LISTWRAPPED, s );
+            retMap = new Tools(this.verbose).lintRemover(retMap);
+            return retMap;
+        } else if ( output instanceof LinkedList ) {
+            @SuppressWarnings("unchecked")
+            final LinkedList<Object> list = ( LinkedList<Object> ) output;
+            // list.forEach( s -> System.out.println( s.toString() ) );
+            LinkedHashMap<String, Object> retMap = new LinkedHashMap<String, Object>();
+            retMap.put( ARRAYWRAPPED, list );
+            retMap = new Tools(this.verbose).lintRemover(retMap);
+            return retMap;
+
+        } else if ( output instanceof ArrayList ) {
+            @SuppressWarnings("unchecked")
+            final ArrayList<String> arr = ( ArrayList<String> ) output;
+            LinkedHashMap<String, Object> retMap = new LinkedHashMap<String, Object>();
+            retMap.put( LISTWRAPPED, arr );
+            retMap = new Tools(this.verbose).lintRemover(retMap);
+            return retMap;
+
+        } else if ( output instanceof LinkedHashMap) {
+            @SuppressWarnings("unchecked")
+            final LinkedHashMap<String, Object> retMap = (LinkedHashMap<String, Object>) output;
+            // I do Not need to run Tools().lintRemover() as the output of org.ASUX.yaml library stays 100% conformant withe com.esotericsoftware library usage.
+            return retMap;
+
+        } else {
+            throw new Exception ( CLASSNAME +": processAnyCommand(): output is Not of type LinkedHashMap.  It's ["+ ((output==null)?"null":output.getClass().getName()) +"]");
+        }
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+    public static enum OutputObjectTypes { UnknownType, String, LinkedHashMap, ArrayList, LinkedList };
+
+    public OutputObjectTypes getOutputObjectType( Object o ) {
+        if ( o == null ) return OutputObjectTypes.UnknownType;
+        if ( o instanceof String ) return  OutputObjectTypes.String;
+        if ( o instanceof ArrayList ) return  OutputObjectTypes.ArrayList;
+        if ( o instanceof LinkedList ) return  OutputObjectTypes.LinkedList;
+        if ( o instanceof LinkedHashMap ) {
+
+            @SuppressWarnings("unchecked")
+            final LinkedHashMap<String, Object> map = (LinkedHashMap<String, Object>) o;
+            if (map.keySet().size() <= 0) return OutputObjectTypes.LinkedHashMap; // This is the only unclear scenario
+
+            if ( map.keySet().size() > 1 ) {
+                return OutputObjectTypes.LinkedHashMap;
+            } else {
+                // assert:   map.keySet().size() == 1 exactly
+                final String k = map.keySet().iterator().next();
+                final Object o1 = map.get(k);
+                if ( o1 instanceof String ) return  OutputObjectTypes.String;
+                if ( o1 instanceof ArrayList ) return  OutputObjectTypes.ArrayList;
+                if ( o1 instanceof LinkedList ) return  OutputObjectTypes.LinkedList;
+                if ( o1 instanceof LinkedHashMap ) return  OutputObjectTypes.LinkedHashMap;
+                return OutputObjectTypes.UnknownType;
+            }
+        }
+        return OutputObjectTypes.UnknownType;
+    }
+
+    //------------------------------------------------------------
+    public ArrayList<String> getArrayList( LinkedHashMap<String, Object> _map ) throws Exception {
+        if ( _map == null ) return null;
+
+        if ( getOutputObjectType(_map) == OutputObjectTypes.ArrayList ) {
+            // assert:   map.keySet().size() == 1 exactly
+            final String k = _map.keySet().iterator().next();
+            // what if this LinkedHashList is created somewhere else.  Let's get too cocky wit this assert (k.equals( ARRAYWRAPPED ));
+            final Object o = _map.get(k);
+            @SuppressWarnings("unchecked")
+            final ArrayList<String> arr = ( ArrayList<String> ) o;
+            return arr;
+        } else {
+            throw new Exception ( CLASSNAME +": getArrayList(): _map parameter does !!NOT!! appear to have JUST 1 entry of type ArrayList");
+        }
+    }
+
+    //------------------------------------------------------------
+    public LinkedList<String> getLinkedList( LinkedHashMap<String, Object> _map ) throws Exception {
+        if ( _map == null ) return null;
+
+        if ( getOutputObjectType(_map) == OutputObjectTypes.LinkedList ) {
+            // assert:   map.keySet().size() == 1 exactly
+            final String k = _map.keySet().iterator().next();
+            // what if this LinkedHashList is created somewhere else.  Let's get too cocky wit this assert (k.equals( ARRAYWRAPPED ));
+            final Object o = _map.get(k);
+            @SuppressWarnings("unchecked")
+            final LinkedList<String> list = ( LinkedList<String> ) o;
+            return list;
+        } else {
+            throw new Exception ( CLASSNAME +": getArrayList(): _map parameter does !!NOT!! appear to have JUST 1 entry of type LinkedList");
+        }
+    }
+
+    //------------------------------------------------------------
+    public String getString( LinkedHashMap<String, Object> _map ) throws Exception {
+        if ( _map == null ) return null;
+
+        if ( getOutputObjectType(_map) == OutputObjectTypes.String ) {
+            // assert:   map.keySet().size() == 1 exactly
+            final String k = _map.keySet().iterator().next();
+            // what if this LinkedHashList is created somewhere else.  Let's get too cocky wit this assert (k.equals( ARRAYWRAPPED ));
+            final Object o = _map.get(k);
+            @SuppressWarnings("unchecked")
+            final String s = (String) o;
+            return s;
+        } else {
+            throw new Exception ( CLASSNAME +": getArrayList(): _map parameter does !!NOT!! appear to have JUST 1 entry of type String");
+        }
+    }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
