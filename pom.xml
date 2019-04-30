@@ -42,6 +42,18 @@
 		<tag>HEAD</tag>
 	</scm>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
 	<dependencies>
         <dependency>
             <!-- scope>test</scope -->
@@ -74,6 +86,27 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.9.8</version>
         </dependency>
+        <!-- <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.5.32</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>utils</artifactId>
+            <version>2.5.32</version>
+        </dependency> -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-core</artifactId>
+            <version>1.11.541</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+            <version>1.11.541</version>
+        </dependency>
+
         <!-- https://github.com/google/gson -->
         <!-- dependency>
             <groupId>com.google.code.gson</groupId>
@@ -157,9 +190,9 @@
 
 
                     <!-- If you want to filter these deployment descriptors, then ...
-                     these <containerConfigXML> and <webXml> tags WILL BE COMPLETELY OVERWRITTEN.
-                     Filtered <resource> tags (see example below) are executed AFTER these tags.
-                     -->
+                        these <containerConfigXML> and <webXml> tags WILL BE COMPLETELY OVERWRITTEN.
+                        Filtered <resource> tags (see example below) are executed AFTER these tags.
+                    -->
                     <!-- Only the last containerConfigXML element is effective -->
                     <containerConfigXML>META-INF/${project.groupId}-${project.artifactId}/weblogic.xml</containerConfigXML>
                     <containerConfigXML>src/main/webapp/META-INF/sun-ejb.xml</containerConfigXML>
