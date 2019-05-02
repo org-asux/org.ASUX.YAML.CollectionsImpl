@@ -54,8 +54,12 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public DeleteYamlEntry(boolean _verbose) {
-        super(_verbose);
+    public DeleteYamlEntry( final boolean _verbose, final boolean _showStats ) {
+        super( _verbose, _showStats );
+    }
+
+    private DeleteYamlEntry() {
+        super( false, true );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -74,15 +78,15 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
-
-//      if ( this.verbose ) {
-//          System.out.print("onEnd2EndMatch: _end2EndPaths =");
-        _end2EndPaths.forEach( s -> System.out.print(s+", ") );
-        System.out.println("");
-//      }
+    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths)
+    {
+        if ( this.verbose ) {
+            System.out.print( CLASSNAME +": onEnd2EndMatch: _end2EndPaths =");
+            _end2EndPaths.forEach( s -> System.out.print(s+", ") );
+            System.out.println("");
+        }
         this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
-//      if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
+        if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
 
@@ -104,14 +108,16 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
-        System.out.println("count=" + this.keys2bRemoved.size() );
+        if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): count=" + this.keys2bRemoved.size() );
         for (Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
             final String rhsStr = tpl.val.toString();
-            if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
             tpl.val.remove(tpl.key);
         }
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
+        if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );
+        if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
