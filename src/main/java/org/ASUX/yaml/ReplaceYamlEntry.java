@@ -64,14 +64,18 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
      *  @param _r this can be either a java.lang.String or a java.util.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans)
      *  @throws java.lang.Exception - if the _r parameter is not as per above Spec
      */
-    public ReplaceYamlEntry(boolean _verbose, Object _r ) throws Exception {
-        super(_verbose);
+    public ReplaceYamlEntry( final boolean _verbose, final boolean _showStats, Object _r ) throws Exception {
+        super( _verbose, _showStats );
         if ( _r == null )
             throw new Exception( CLASSNAME + ": _r parameter is Null");
         if ( ! (_r instanceof java.lang.String) && ! (_r instanceof java.util.LinkedHashMap ) )
             throw new Exception( CLASSNAME + ": Invalid _r parameter of type:" + _r.getClass().getName() + "'");
 
         this.replacementData = _r;
+    }
+
+    private ReplaceYamlEntry() {
+        super( false, true );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -92,13 +96,13 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
-//      if ( this.verbose ) {
-//          System.out.print("onEnd2EndMatch: _end2EndPaths =");
+        if ( this.verbose ) {
+            System.out.print("onEnd2EndMatch: _end2EndPaths =");
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
-//      }
+        }
         this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
-//      if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
+        if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
 
@@ -134,6 +138,8 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
         }
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
+        if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );
+        if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
