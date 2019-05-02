@@ -60,14 +60,20 @@ public abstract class AbstractYamlEntryProcessor {
      */
     public final boolean verbose;
 
+    /** <p>Whether you want a final SHORT SUMMARY onto System.out.</p><p>a summary of how many matches happened, or how many entries were affected or even a short listing of those affected entries.</p>
+     */
+    public final boolean showStats;
+
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public AbstractYamlEntryProcessor(boolean _verbose) {
+    public AbstractYamlEntryProcessor( final boolean _verbose, final boolean _showStats ) {
         this.verbose = _verbose;
+        this.showStats = _showStats || _verbose;
     }
     protected AbstractYamlEntryProcessor(){
         this.verbose = false;
+        this.showStats = true;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
