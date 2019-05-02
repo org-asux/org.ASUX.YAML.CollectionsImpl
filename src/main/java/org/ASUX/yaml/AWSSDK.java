@@ -33,16 +33,14 @@
 package org.ASUX.yaml;
 
 // import java.util.Map;
-// import java.util.LinkedList;
-// import java.util.ArrayList;
-// import java.util.LinkedHashMap;
-// import java.util.Properties;
+import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Properties;
+//import java.util.regex.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-//import java.util.regex.*;
-import java.util.Properties;
 
 // https://github.com/eugenp/tutorials/tree/master/aws/src/main/java/com/baeldung
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Region.html
@@ -101,6 +99,10 @@ public class AWSSDK {
     public AWSSDK(boolean _verbose, final String _AWSAccessKeyId, final String _AWSSecretAccessKey) {
         this.verbose = _verbose;
         this.AWSAuthenticate( _AWSAccessKeyId, _AWSSecretAccessKey );
+    }
+
+    private AWSSDK() {
+        this.verbose = false;
     }
 
     //------------------------------------------------------------------------------
@@ -197,6 +199,10 @@ public class AWSSDK {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
+    /**
+     * Pass in a region-name and get back the output of the cmdline as JSON (cmdline being:- aws ec2 describe-regions --profile ______ --output json)
+     * @return An array of YAML-Maps.  Its exactly === cmdline output of: aws ec2 describe-regions --profile ______ --output json
+     */
     public ArrayList<String> getRegions( ) {
         final AmazonEC2 ec2 = this.getAWSEC2Hndl( null );
         final DescribeRegionsResult regions_response = ec2.describeRegions();
@@ -208,6 +214,11 @@ public class AWSSDK {
         return retarr;
     }
 
+    /**
+     * Pass in a region-name and get back ONLY THE AZ-NAMES in the output of the cmdline as JSON (cmdline being:- aws ec2 describe-availability-zones --region us-east-2 --profile ______ --output json)
+     * @param _regionStr pass in valid AWS region names like 'us-east-2', 'us-west-1', 'ap-northeast-1' ..
+     * @return An array of Strings.
+     */
     public ArrayList<String>  getAZs( final String _regionStr ) {
         final AmazonEC2 ec2 = this.getAWSEC2Hndl( _regionStr );
         DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
@@ -219,12 +230,39 @@ public class AWSSDK {
         return retarr;
     }
 
+    /**
+     * Pass in a region-name and get back the output of the cmdline as JSON (cmdline being:- aws ec2 describe-availability-zones --region us-east-2 --profile ______ --output json)
+     * @param _regionStr pass in valid AWS region names like 'us-east-2', 'us-west-1', 'ap-northeast-1' ..
+     * @return An array of YAML-Maps.  Its exactly === cmdline output of: aws ec2 describe-availability-zones --region us-east-2 --profile ______ --output json
+     * @throws Exception could be one of com.esotericsoftware.yamlbeans.YamlException, java.io.IOException, or any runtime Exception
+     */
+    public ArrayList< LinkedHashMap<String,Object> >  describeAZs( final String _regionStr ) throws Exception {
+        final AmazonEC2 ec2 = this.getAWSEC2Hndl( _regionStr );
+        DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
+        final ArrayList< LinkedHashMap<String,Object> > retarr = new ArrayList<>();
+        for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
+            // System.out.printf( "Found availability zone %s with status %s in region %s\n", zone.getZoneName(), zone.getState(), zone.getRegionName());
+            // ASSUMPTION: I printed zone.toString() to STDOUT, and noted it's proper JSON.
+            String s = zone.toString().replaceAll("=",":");
+            if ( this.verbose ) System.out.println( CLASSNAME +": describeAZs(): aws ec2 describe-az command output corrected to be JSON-compatible as ["+ s +"]" );
+            final LinkedHashMap<String,Object> map = new Tools(this.verbose).JSONString2YAML( s );
+            if ( this.verbose ) System.out.println( map.toString() );
+            retarr.add( map );
+        }
+        return retarr;
+    }
+
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    public static AWSSDK AWSCmdline() {
+    /**
+     * Initialize &amp; Connect into AWS, by leveraging the AWS-credentials stored in a file called 'profile' in the current working directory from which this code is being run
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @return return a handle to the SDK - for further calls to methods within this class
+     */
+    public static AWSSDK AWSCmdline( final boolean _verbose ) {
         try {
             final Properties p = new Properties();
             p.load( new FileInputStream( AWSProfileFileName ) );
@@ -233,7 +271,7 @@ public class AWSSDK {
             final String AWSSecretAccessKey = System.getProperty( "aws.secretAccessKey");
             // System.out.println( "AWSAccessKeyId=["+ AWSAccessKeyId +" AWSSecretAccessKey=["+ AWSSecretAccessKey +"]" );
 
-            final AWSSDK awssdk = AWSSDK.getConnection( true, AWSAccessKeyId, AWSSecretAccessKey );
+            final AWSSDK awssdk = AWSSDK.getConnection( _verbose, AWSAccessKeyId, AWSSecretAccessKey );
             return awssdk;
 
         } catch(FileNotFoundException fe) {
@@ -254,7 +292,7 @@ public class AWSSDK {
 
     public static void main(String[] args) {
         try {
-            final AWSSDK awssdk = AWSCmdline();
+            final AWSSDK awssdk = AWSCmdline( true );
             awssdk.getRegions( ).forEach( s -> System.out.println(s) );
             System.out.println("\n\n");
             awssdk.getAZs( args[0] ).forEach( s -> System.out.println(s) );
