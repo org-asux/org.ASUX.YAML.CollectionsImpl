@@ -75,13 +75,14 @@ public class Tools {
     // see if you can have ths implement the interface BiConsumer<T,U>
     // https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html
 
-    public static class Tuple<X, Y> {
+    public static class Tuple<X, Y> implements java.io.Serializable {
         public final X key;
         public final Y val;
         public Tuple(X _k, Y _m) {
             this.key = _k;
             this.val = _m;
         }
+        public String toString() { return this.key.toString() +"="+ this.val.toString(); }
     }
 
     public ArrayList< Tools.Tuple< String,String > >      getKVPairs( final Object _o ) {
