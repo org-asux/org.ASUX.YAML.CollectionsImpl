@@ -55,14 +55,14 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public ReadYamlEntry(boolean _verbose) {
-        super(_verbose);
+    public ReadYamlEntry( final boolean _verbose, final boolean _showStats ) {
+        super( _verbose, _showStats );
         this.count = 0;
         this.output = new LinkedList<>();
     }
 
     private ReadYamlEntry() {
-        super(false);
+        super(false, false);
         this.count = 0;
         this.output = new LinkedList<>();
     }
@@ -86,9 +86,11 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
         this.count ++;
-        // System.out.print("onEnd2EndMatch: _end2EndPaths =");
-        // end2EndPaths.forEach( s -> System.out.print(s+"\t") );
-        // System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _map.get(_key) = ["+ _map.get(_key) +"]");
+        if ( this.verbose ) {
+            System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
+            _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
+            System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _map.get(_key) = ["+ _map.get(_key) +"]");
+        }
         Object o = _map.get(_key);
         final String s = (o == null) ? "null" : o.toString();
         if ( this.verbose ) System.out.println( s );
@@ -115,7 +117,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
-        if ( this.verbose ) System.out.println("Total=" + this.count );
+        if ( this.showStats ) System.out.println("Total=" + this.count );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
