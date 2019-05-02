@@ -284,14 +284,14 @@ public class Cmd {
             return outputStr;
 
         } else if ( _cmdLineArgs.isDelCmd) {
-            if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(): about to start DELETE command");
+            if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
             DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose);
             delcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             // writer.write( _data ); // The contents of java.util.LinkedHashMap<String, Object> has some YAML rows removed. so, dump it.
             return _data;
 
         } else if ( _cmdLineArgs.isReplaceCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
+            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
             Object replContent = null;
             if ( !_cmdLineArgs.replaceFilePath.startsWith("@") ) {
                 // user provided a SIMPLE String as the RHS-replacement value
@@ -304,14 +304,14 @@ public class Cmd {
                     // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file
                     // contents into a java.util.LinkedHashMap<String, Object>
                     replContent = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
-                    if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): Loaded REPLACEMENT-contents: [" + replContent.toString() + "]");
+                    if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): Loaded REPLACEMENT-contents: [" + replContent.toString() + "]");
                 } catch (java.io.IOException e) {
                     e.printStackTrace(System.err);
-                    System.err.println( CLASSNAME + ": processCommand(): trouble with REPLACEMENT-File: '" + _cmdLineArgs.replaceFilePath.substring(1) + "'.");
+                    System.err.println( CLASSNAME + ": processCommand(isReplaceCmd): trouble with REPLACEMENT-File: '" + _cmdLineArgs.replaceFilePath.substring(1) + "'.");
                     System.exit(11);
                 }
             } // if-else startsWith"@"
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
+            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
             ReplaceYamlEntry replcmd = new ReplaceYamlEntry(_cmdLineArgs.verbose, replContent);
             replcmd.searchYamlForPattern(_data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
@@ -330,13 +330,13 @@ public class Cmd {
         //                 );
 
     } else if ( _cmdLineArgs.isMacroCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
+            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             final Properties properties = new Properties();
             if (_cmdLineArgs.propertiesFilePath != null) {
                 java.io.InputStream input = new java.io.FileInputStream( _cmdLineArgs.propertiesFilePath );
                 properties.load( input );
             }
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): about to start MACRO command using: [Props file [" + _cmdLineArgs.propertiesFilePath + "]");
+            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             MacroYamlProcessor macro = new MacroYamlProcessor(_cmdLineArgs.verbose);
             final LinkedHashMap<String, Object> outpMap = new LinkedHashMap<>();
             macro.recursiveSearch( _data, outpMap, properties );
@@ -344,10 +344,11 @@ public class Cmd {
             return outpMap;
 
         } else if ( _cmdLineArgs.isBatchCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(): about to start MACRO command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
+            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
             BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose );
             LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
             batcher.go( _cmdLineArgs.batchFilePath, _data, outpMap );
+            if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap =" + outpMap +"\n\n");
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return outpMap;
 
