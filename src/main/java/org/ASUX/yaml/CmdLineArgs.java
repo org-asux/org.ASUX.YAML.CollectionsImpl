@@ -66,6 +66,8 @@ public class CmdLineArgs {
     // private static final String PROPERTIES = "properties";
 
     public boolean verbose = false;
+    public boolean showStats = false;
+
     public boolean isReadCmd = true;
     public boolean isListCmd = false;
     public boolean isDelCmd = false;
@@ -89,9 +91,13 @@ public class CmdLineArgs {
      */
     public CmdLineArgs(String[] args) {
         Options options = new Options();
-        
         Option opt;
+
         opt= new Option("v", "verbose", false, "Show debug output");
+        opt.setRequired(false);
+        options.addOption(opt);
+
+        opt= new Option("v", "showStats", false, "Show - at end output - a summary of how many matches happened, or entries were affected");
         opt.setRequired(false);
         options.addOption(opt);
 
@@ -172,6 +178,8 @@ public class CmdLineArgs {
             cmd = parser.parse(options, args);
 
             this.verbose = cmd.hasOption("verbose");
+            this.showStats = cmd.hasOption("showStats");
+
             this.yamlPatternDelimiter = cmd.getOptionValue(DELIMITER);
             if ( this.yamlPatternDelimiter == null || this.yamlPatternDelimiter.equals(".") )
                 this.yamlPatternDelimiter = YAMLPath.DEFAULTDELIMITER;
@@ -218,7 +226,7 @@ public class CmdLineArgs {
     /** For making it easy to have simple code generate debugging-output, added this toString() method to this class.
      */
     public String toString() {
-        return "verbose="+verbose+" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
+        return "verbose="+verbose+" showStats="+showStats+" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
         +" read="+isReadCmd+" list="+isListCmd+"  delete="+isDelCmd+" change="+isReplaceCmd
         +" macro="+isMacroCmd+" batch="+isBatchCmd
         +" inpfile="+inputFilePath+" outputfile="+outputFilePath+" replaceFile="+replaceFilePath

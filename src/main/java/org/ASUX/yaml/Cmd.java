@@ -272,20 +272,20 @@ public class Cmd {
                 throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
     {
         if ( _cmdLineArgs.isReadCmd ) {
-            ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose );
+            ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             readcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             final LinkedList<Object> outputStr = readcmd.getOutput();
             return outputStr;
 
         } else if ( _cmdLineArgs.isListCmd ) {
-            ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, YAMLPath.DEFAULTPRINTDELIMITER );
+            ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, YAMLPath.DEFAULTPRINTDELIMITER );
             listcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             final ArrayList<String> outputStr = listcmd.getOutput();
             return outputStr;
 
         } else if ( _cmdLineArgs.isDelCmd) {
             if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
-            DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose);
+            DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             delcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             // writer.write( _data ); // The contents of java.util.LinkedHashMap<String, Object> has some YAML rows removed. so, dump it.
             return _data;
@@ -312,7 +312,7 @@ public class Cmd {
                 }
             } // if-else startsWith"@"
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
-            ReplaceYamlEntry replcmd = new ReplaceYamlEntry(_cmdLineArgs.verbose, replContent);
+            ReplaceYamlEntry replcmd = new ReplaceYamlEntry(_cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent);
             replcmd.searchYamlForPattern(_data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return _data;
@@ -337,7 +337,7 @@ public class Cmd {
                 properties.load( input );
             }
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + _cmdLineArgs.propertiesFilePath + "]");
-            MacroYamlProcessor macro = new MacroYamlProcessor(_cmdLineArgs.verbose);
+            MacroYamlProcessor macro = new MacroYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             final LinkedHashMap<String, Object> outpMap = new LinkedHashMap<>();
             macro.recursiveSearch( _data, outpMap, properties );
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
@@ -345,7 +345,7 @@ public class Cmd {
 
         } else if ( _cmdLineArgs.isBatchCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
-            BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose );
+            BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
             batcher.go( _cmdLineArgs.batchFilePath, _data, outpMap );
             if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap =" + outpMap +"\n\n");
