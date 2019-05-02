@@ -64,6 +64,10 @@ public class Tools {
         this.verbose = _verbose;
     }
 
+    private Tools() {
+        this.verbose = false;
+    }
+
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
@@ -123,15 +127,17 @@ public class Tools {
             defaultConfigurationForYamlWriter( writer3 );
             writer3.write( _json );
             writer3.close();
-            if ( this.verbose ) System.out.println( CLASSNAME + ": created new YAML-String\n" + strwrtr3.toString() +"\n" );
+            if ( this.verbose ) System.out.println( CLASSNAME + ": JSON2YAML(): created new YAML-String\n" + strwrtr3.toString() +"\n" );
 
-            final java.io.Reader reader3 = new java.io.StringReader( strwrtr3.toString() );
-            @SuppressWarnings("unchecked")
-            final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
-            reader3.close();
-            if ( this.verbose ) System.out.println( CLASSNAME + ": created new Map [" + tempMap.toString() +"]" );
+            // final java.io.Reader reader3 = new java.io.StringReader( strwrtr3.toString() );
+            // @SuppressWarnings("unchecked")
+            // final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
+            // reader3.close();
+            // if ( this.verbose ) System.out.println( CLASSNAME + ": JSON2YAML(): created new Map [" + tempMap.toString() +"]" );
 
-            return tempMap;
+            // return tempMap;
+
+            return JSONString2YAML( strwrtr3.toString() );
 
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             e.printStackTrace(System.err);
@@ -147,6 +153,30 @@ public class Tools {
             System.exit(103);
         }
         return null;
+    } // function
+
+
+    /**
+     *  Takes any STRING-form JSON as input - it better be valid JSON - and reads it back as YAML/LinkedHashMap.
+     *  I need such a function, as I learned the hard way that libraries do NOT work 100% well.  Only file-formats are the workaorund/ way out.
+     *  I definitely "fgool-proof" method to ensure 'valid' YAML, for error-free processing by the entire org.ASUX.yaml library to work without any issues
+     *  @param _jsonString a java.lang.String object
+     *  @return a java.util.LinkedHashMap&lt;String, Object&gt; object that's definitely "kosher" for the entire org.ASUX.yaml library to work without any issues
+     * @throws com.esotericsoftware.yamlbeans.YamlException if unable to convert into LinkedHashMap per com.esotericsoftware.yamlbeans library
+     * @throws java.io.IOException if any error using java.io.StringReader and java.io.StringWriter
+     * @throws Exception any other run-time exception, while parsing large Strings, nullpointers, etc.. ..
+     */
+    public LinkedHashMap<String, Object>  JSONString2YAML( final String  _jsonString)
+                    throws com.esotericsoftware.yamlbeans.YamlException, java.io.IOException, Exception
+    {
+        final java.io.StringWriter strwrtr3 = new java.io.StringWriter();
+        final java.io.Reader reader3 = new java.io.StringReader( _jsonString );
+        @SuppressWarnings("unchecked")
+        final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
+        reader3.close();
+        if ( this.verbose ) System.out.println( CLASSNAME + ": JSONString2YAML(): created new Map [" + tempMap.toString() +"]" );
+
+        return tempMap;
     } // function
 
     //==============================================================================
@@ -220,6 +250,7 @@ public class Tools {
             if (map.keySet().size() <= 0) return OutputObjectTypes.Type_LinkedHashMap; // This is the only unclear scenario
 
             if ( map.keySet().size() > 1 ) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": getOutputObjectType(): checking whether a Map is KVPairs/Plural.. for "+ map.toString() );
                 // check to see if the LinkedHashMap is just 1-level deep with NOTHING but String:String Key-value pairs.
                 // That is, the LinkedHashMap has NO NESTING.
                 boolean bOnlyKVPairs = true; // guilty until proven innocent.
@@ -231,6 +262,7 @@ public class Tools {
                         break;
                     }
                 }
+                if ( this.verbose ) System.out.println( CLASSNAME +": getOutputObjectType(): .. .. .. .. it turns out that .. bOnlyKVPairs= "+ bOnlyKVPairs );
                 if ( bOnlyKVPairs )
                     return OutputObjectTypes.Type_KVPairs; // PLURAL;  Note the 's' character @ end.  This is Not KVPair (singular)
                 else
