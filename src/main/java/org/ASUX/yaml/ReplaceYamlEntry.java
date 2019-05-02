@@ -56,7 +56,9 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
     protected final LinkedList< Tools.Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
-    protected Object replacementData = "";
+    // The above could have been a simpler LinkedList<String>.  But EFFICIENT-debugging-OUTPUT requires we also keep a copy of the Map object associated with each Key/String.
+
+    protected Object replacementData = "?? huh ??";
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
@@ -84,7 +86,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a partial match of a YAML path-expression happens.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch}
      */
-    protected boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected boolean onPartialMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
         // Do Nothing for "Replace YAML-entry command"
         return true;
@@ -94,7 +96,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
-    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected boolean onEnd2EndMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
         if ( this.verbose ) {
             System.out.print("onEnd2EndMatch: _end2EndPaths =");
@@ -110,7 +112,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called whenever the YAML path-expression fails to match.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail}
      */
-    protected void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
+    protected void onMatchFail( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
         // Do Nothing for "Replace YAML-entry command"
     }
@@ -122,9 +124,9 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
+    protected void atEndOfInput( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath ) {
 
-        System.out.println("count=" + this.keys2bRemoved.size() );
+        if ( this.verbose ) System.out.println("count=" + this.keys2bRemoved.size() );
         for (Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
             final String rhsStr = tpl.val.toString();
             if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
