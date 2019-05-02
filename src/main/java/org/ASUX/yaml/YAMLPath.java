@@ -267,14 +267,6 @@ public class YAMLPath implements Serializable {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-//    public CloneExample clone() {
-//        try {
-//            return (CloneExample) super.clone();
-//        } catch (CloneNotSupportedException e) {
-//            return null;
-//        }
-//    }
-
     /** This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
      *  @param _orig what you want to deep-clone
      *  @return a deep-cloned copy, created by serializing into a ByteArrayOutputStream and reading it back (leveraging ObjectOutputStream)
@@ -293,6 +285,47 @@ public class YAMLPath implements Serializable {
         } catch (ClassNotFoundException e) {
             return null;
         }
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * Implements the Object.toString() operation .. in a superior manner for debugging.
+     */
+    public String toString() {
+        if ( this.isValid )
+            return this.getPrefix() +"\t"+ this.getSuffix() +"@"+ this.index();
+        else
+            return "Invalid object of "+CLASSNAME;
+    }
+
+    /** This equality function is needed for efficient processing within InsertYamlProcessor.java.
+     *  This function does NOT assume any common objects/strings.  It does a TRUE value-based comparison.
+     *  It does the a TRUE value-based comparison by taking advantage of the fact that this class is Streamable.
+     *  So.. java.util.Arrays.equals( lhsbytes[], rhsbytes[] )
+     */
+    /** THis function simply compares the prefix and suffixes of LHS & RHS
+     *  @param _lhs left hand side
+     *  @param _rhs right hand side
+     *  @return true or fale
+     */
+    public static boolean areEquivalent( YAMLPath _lhs, YAMLPath _rhs ) {
+        if ( _lhs == null && _rhs == null ) return true;
+        if ( _lhs == null || _lhs.getPrefix() == null || _lhs.getSuffix() == null ) return false;
+        return _lhs.getPrefix().equals(_rhs.getPrefix()) && _lhs.getSuffix().equals(_rhs.getSuffix());
+        // try {
+            // ByteArrayOutputStream baosLHS = new ByteArrayOutputStream();
+            // ObjectOutputStream oosLHS = new ObjectOutputStream(baosLHS);
+            // oosLHS.writeObject(_lhs);
+            // ByteArrayOutputStream baosRHS = new ByteArrayOutputStream();
+            // ObjectOutputStream oosRHS = new ObjectOutputStream(baosRHS);
+            // oosRHS.writeObject(_rhs);
+            // return java.util.Arrays.equals( baosLHS.toByteArray(), baosRHS.toByteArray() );
+        // } catch (IOException e) {
+        //     return null;
+        // } catch (ClassNotFoundException e) {
+        //     return null;
+        // }
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
