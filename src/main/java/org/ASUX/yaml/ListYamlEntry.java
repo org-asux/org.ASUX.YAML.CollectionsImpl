@@ -57,15 +57,15 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _printDelim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      */
-    public ListYamlEntry(boolean _verbose, final String _printDelim) {
-        super(_verbose);
+    public ListYamlEntry( final boolean _verbose, final boolean _showStats, final String _printDelim ) {
+        super( _verbose, _showStats );
         this.count = 0;
         this.output = new ArrayList<>();
         this.yamlPatternPRINTDelimiter = _printDelim;
     }
 
     private ListYamlEntry() {
-        super(false);
+        super(false, false);
         this.count = 0;
         this.output = new ArrayList<>();
         this.yamlPatternPRINTDelimiter = null;
@@ -91,13 +91,18 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
 
         this.count ++;
 
-        // _end2EndPaths.forEach( s -> System.out.print(s+"\t") );    System.out.println();
+        if ( this.verbose ) {
+            System.out.print( CLASSNAME +": onEnd2EndMatch(): " );
+            _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
+            System.out.println();
+        }
         String sss = null;
         for ( String s: _end2EndPaths ) {
             sss = (sss==null) ?   s    : sss + this.yamlPatternPRINTDelimiter + s;
         }
         this.output.add( sss ); // could be a string or a java.util.LinkedHashMap<String, Object>
-        // System.out.println("onEnd2EndMatch: _end2EndPaths = [" +sss +"]");
+        if ( this.verbose ) System.out.println( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths = [" +sss +"]" );
+        if ( this.showStats ) System.out.println( sss );
 
         return true;
     }
@@ -120,7 +125,7 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
-        if ( this.verbose ) System.out.println("Total=" + this.count );
+        if ( this.showStats ) System.out.println("Total=" + this.count );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
