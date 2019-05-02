@@ -59,14 +59,22 @@ public class MacroYamlProcessor {
      */
     private final boolean verbose;
 
+    /** <p>Whether you want a final SHORT SUMMARY onto System.out.</p><p>a summary of how many matches happened, or how many entries were affected or even a short listing of those affected entries.</p>
+     */
+	public final boolean showStats;
+
+	private int changesMade = 0;
+
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
-    public MacroYamlProcessor(boolean _verbose) {
-        this.verbose = _verbose;
+    public MacroYamlProcessor(boolean _verbose, final boolean _showStats) {
+		this.verbose = _verbose;
+		this.showStats = _showStats;
     }
-    protected MacroYamlProcessor(){
-        this.verbose = false;
+    private MacroYamlProcessor(){
+		this.verbose = false;
+		this.showStats = true;
     }
 
     //------------------------------------------------------------------------------
@@ -108,7 +116,7 @@ public class MacroYamlProcessor {
             final Object rhsObj = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
             final String rhsStr = rhsObj.toString(); // to make verbose logging code simplified
 
-            if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
+            if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursiveSearch(): recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
 
 			//--------------------------------------------------------
 			// So.. we need to keep recursing (specifically for LinkedHashMap<String, Object> & ArrayList YAML elements)
@@ -142,7 +150,7 @@ public class MacroYamlProcessor {
 						// by o.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
 						newarr.add ( evaluateMacros( o.toString(), _props ) );
 					} else {
-						System.err.println(CLASSNAME +": incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
+						System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 						System.exit(92); // This is a serious failure. Shouldn't be happening.
 					} // if-Else   o instanceof LinkedHashMap<String, Object> - (WITHIN FOR-LOOP)
 				} // for Object o: arr
@@ -154,21 +162,24 @@ public class MacroYamlProcessor {
 
 			} else if ( rhsObj instanceof java.lang.String ) {
 				// by rhsObj.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-				final String s = evaluateMacros( rhsObj.toString(), _props);
-				_outpMap.put( key, s );
+				final String asis = rhsObj.toString();
+				final String news = evaluateMacros( asis, _props);
+				if (   !    asis.equals(news) ) this.changesMade ++;
+				_outpMap.put( key, news );
 				// Why am I not simply doing:-       _outpMap.put( key, newarr )
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
 				// tool.addStringEntry( _outpMap, key, s );
 
             } else {
-				System.err.println(CLASSNAME +": incomplete code #2: failure w Type '"+ rhsObj.getClass().getName() +"'");
+				System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #2: failure w Type '"+ rhsObj.getClass().getName() +"'");
 				System.exit(93); // This is a serious failure. Shouldn't be happening.
             }// if-else yamlPElemPatt.matcher()
 
         } // for loop   key: _inpMap.keySet()
 
         // Now that we looped thru all keys at current recursion level..
-        // .. for now nothing to do here.
+		// .. for now nothing to do here.
+		if ( this.showStats ) System.out.println("# of changes made = "+ changesMade );
 
         return bChangesMade;
     }
@@ -188,7 +199,7 @@ public class MacroYamlProcessor {
 	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
 	 * @param _props a java.util.Properties object (null will mean function returns immediately)
 	 * @return the original string as-is (if no macros were detected).. or the altered version
-	 * @throw MacroYamlProcessor.MacroException if ANY failure in evaluating the macro on the input _s
+	 * @throws MacroYamlProcessor.MacroException if ANY failure in evaluating the macro on the input _s
 	 */
 	public static String evaluateMacros( final String _s, final Properties _props) throws MacroYamlProcessor.MacroException {
 		if (_s==null) return null;
@@ -227,8 +238,8 @@ public class MacroYamlProcessor {
 
 		} catch (PatternSyntaxException e) {
 			e.printStackTrace(System.err);
-			final String s = " checking if '" + _s + "' matches pattern " + MacroYamlProcessor.pattStr;
-			System.err.println(CLASSNAME + ": Unexpected Internal ERROR: " + s );
+			final String s = "PatternSyntaxException when checking if '" + _s + "' matches pattern " + MacroYamlProcessor.pattStr;
+			System.err.println(CLASSNAME + ": evaluateMacros(): Unexpected Internal ERROR: " + s );
 			throw new MacroException( s );
 			// System.exit(91); // This is a serious failure. Shouldn't be happening.
 		}
@@ -240,7 +251,7 @@ public class MacroYamlProcessor {
 	/**
 	 * This is a variant of evaluateMacros(), to support Batch-Cmd mode, where BatchFile can load MULTIPLE property-files
 	 * @param _s the string which CAN (not required to) contain macro expressions like ${ASUX::___}
-	 * @param _props a java.util.Properties object (null will mean function returns immediately)
+	 * @param _propsSet a java.util.Properties object (null will mean function returns immediately)
 	 * @return the original string as-is (if no macros were detected).. or the altered version
 	 * @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
 	 */
