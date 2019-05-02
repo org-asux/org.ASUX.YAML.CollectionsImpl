@@ -48,19 +48,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "org.ASUX.yaml.DeleteYamlEntry";
 
-    protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
-
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    // see if you can have ths implement the interface BiConsumer<T,U>
-    // https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html
-    public class Tuple<X, Y> {
-        public final X key;
-        public final Y map;
-        public Tuple(X _k, Y _m) {
-            this.key = _k;
-            this.map = _m;
-        }
-    }
+    protected final LinkedList< Tools.Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
@@ -93,7 +81,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
         _end2EndPaths.forEach( s -> System.out.print(s+", ") );
         System.out.println("");
 //      }
-        this.keys2bRemoved.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
+        this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
 //      if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
@@ -117,13 +105,13 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
         System.out.println("count=" + this.keys2bRemoved.size() );
-        for (Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
-            final String rhsStr = tpl.map.toString();
+        for (Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
+            final String rhsStr = tpl.val.toString();
             if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
-            tpl.map.remove(tpl.key);
+            tpl.val.remove(tpl.key);
         }
         // java's forEach never works if you are altering anything within the Lambda body
-        // this.keys2bRemoved.forEach( tpl -> {tpl.map.remove(tpl.key); });
+        // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
