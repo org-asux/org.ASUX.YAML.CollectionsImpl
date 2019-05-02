@@ -54,6 +54,7 @@ public class CmdLineArgs {
     private static final String READCMD = "read";
     private static final String LISTCMD = "list";
     private static final String DELETECMD = "delete";
+    private static final String INSERTCMD = "insert";
     private static final String REPLACECMD = "replace";
     // private static final char REPLACECMDCHAR = 'c'; // -c === --replace
     private static final String MACROCMD = "macro";
@@ -71,12 +72,14 @@ public class CmdLineArgs {
     public boolean isReadCmd = true;
     public boolean isListCmd = false;
     public boolean isDelCmd = false;
+    public boolean isInsertCmd = false;
     public boolean isReplaceCmd = false;
     public boolean isMacroCmd = false;
     public boolean isBatchCmd = false;
 
     public String inputFilePath = "/tmp/i";
     public String outputFilePath = "/tmp/o";
+    public String insertFilePath = null;       // optional argument, but required for 'insert' command
     public String replaceFilePath = null;       // optional argument, but required for 'replace' command
     public String propertiesFilePath = null;    // optional argument, but required for 'macro' command
     public String batchFilePath = null;    // optional argument, but required for 'batch' command
@@ -119,6 +122,11 @@ public class CmdLineArgs {
             macroCmdOpt.setOptionalArg(false);
             macroCmdOpt.setArgs(1);
             macroCmdOpt.setArgName("propertiesFile");
+        Option insCmdOpt = new Option("i", INSERTCMD, true, "insert new element (json-string parameter) @ the locations identified by the YAML path");
+            insCmdOpt.setOptionalArg(false);
+            insCmdOpt.setArgs(2);
+            insCmdOpt.setValueSeparator(' ');
+            insCmdOpt.setArgName("YAMLPattern> <newValue"); // Note: there's a trick in the parameter-string.. as setArgName() assumes a single 'word' and puts a '<' & '>' around that single-word.
         Option replCmdOpt = new Option("c", REPLACECMD, true, "change/replace all elements that match with json-string provided on cmdline");
             replCmdOpt.setOptionalArg(false);
             replCmdOpt.setArgs(2);
@@ -131,6 +139,7 @@ public class CmdLineArgs {
         grp.addOption(readCmdOpt);
         grp.addOption(listCmdOpt);
         grp.addOption(delCmdOpt);
+        grp.addOption(insCmdOpt);
         grp.addOption(replCmdOpt);
         grp.addOption(macroCmdOpt);
         grp.addOption(batchCmdOpt);
@@ -187,6 +196,7 @@ public class CmdLineArgs {
             this.isReadCmd = cmd.hasOption(READCMD);
             this.isListCmd = cmd.hasOption(LISTCMD);
             this.isDelCmd = cmd.hasOption(DELETECMD);
+            this.isInsertCmd = cmd.hasOption(INSERTCMD);
             this.isReplaceCmd = cmd.hasOption(REPLACECMD);
             this.isMacroCmd = cmd.hasOption(MACROCMD);
             this.isBatchCmd = cmd.hasOption(BATCHCMD);
@@ -199,10 +209,14 @@ public class CmdLineArgs {
             if (this.isReadCmd) this.yamlRegExpStr = cmd.getOptionValue(READCMD);
             if (this.isListCmd) this.yamlRegExpStr = cmd.getOptionValue(LISTCMD);
             if (this.isDelCmd) this.yamlRegExpStr = cmd.getOptionValue(DELETECMD);
-            final String[] searchArgs = cmd.getOptionValues(REPLACECMD);
-            // because we set .setArgs(2) above.. you can get the values for:- searchArgs[0] and searchArgs[1].
-            if (this.isReplaceCmd) this.yamlRegExpStr = searchArgs[0]; // 1st of the 2 arguments for REPLACE cmd.
-            if (this.isReplaceCmd) this.replaceFilePath = searchArgs[1];
+            final String[] insertArgs = cmd.getOptionValues(INSERTCMD);
+            // because we set .setArgs(2) above.. you can get the values for:- insertArgs[0] and insertArgs[1].
+            if (this.isInsertCmd) this.yamlRegExpStr = insertArgs[0]; // 1st of the 2 arguments for INSERT cmd.
+            if (this.isInsertCmd) this.insertFilePath = insertArgs[1];
+            final String[] replaceArgs = cmd.getOptionValues(REPLACECMD);
+            // because we set .setArgs(2) above.. you can get the values for:- replaceArgs[0] and replaceArgs[1].
+            if (this.isReplaceCmd) this.yamlRegExpStr = replaceArgs[0]; // 1st of the 2 arguments for REPLACE cmd.
+            if (this.isReplaceCmd) this.replaceFilePath = replaceArgs[1];
 
             this.propertiesFilePath = cmd.getOptionValue(MACROCMD);
             this.batchFilePath = cmd.getOptionValue(BATCHCMD);
@@ -227,14 +241,14 @@ public class CmdLineArgs {
      */
     public String toString() {
         return "verbose="+verbose+" showStats="+showStats+" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
-        +" read="+isReadCmd+" list="+isListCmd+"  delete="+isDelCmd+" change="+isReplaceCmd
+        +" read="+isReadCmd+" list="+isListCmd+"  delete="+isDelCmd+" insert="+isInsertCmd+" change="+isReplaceCmd
         +" macro="+isMacroCmd+" batch="+isBatchCmd
-        +" inpfile="+inputFilePath+" outputfile="+outputFilePath+" replaceFile="+replaceFilePath
+        +" inpfile="+inputFilePath+" outputfile="+outputFilePath+" insertFile="+insertFilePath+" replaceFile="+replaceFilePath
         +" batchFilePath="+batchFilePath+" propertiesFilePath="+propertiesFilePath
         ;
         // yamlRegExpStr="+yamlRegExpStr+" 
     }
-    
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // For unit-testing purposes only
 //    public static void main(String[] args) {

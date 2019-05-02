@@ -136,6 +136,7 @@ public class Cmd {
             // if ( cmdLineArgs.isReadCmd ) {
             // } else if ( cmdLineArgs.isListCmd ) {
             // } else if ( cmdLineArgs.isDelCmd ) {
+            // } else if ( cmdLineArgs.isInsertCmd ) {
             // } else if ( cmdLineArgs.isReplaceCmd ) {
             // } else if ( cmdLineArgs.isMacroCmd ) {
             // } else if ( cmdLineArgs.isBatchCmd ) {
@@ -143,7 +144,7 @@ public class Cmd {
             // }
 
             // common to 3 of the above empty if-else
-            // if ( cmdLineArgs.isDelCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd ) { }
+            // if ( cmdLineArgs.isDelCmd || cmdLineArgs.isInsertCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd ) { }
 
             // prepare for output: whether it goes to System.out -or- to an actual output-file.
             writer = ( cmdLineArgs.outputFilePath.equals("-") )
@@ -186,13 +187,14 @@ public class Cmd {
                 // arr.forEach( s -> System.out.println( s ) );
                 writer.write( arr );
             } else if ( cmdLineArgs.isDelCmd ) {
+            } else if ( cmdLineArgs.isInsertCmd ) { // see common code in next block-of-code below
             } else if ( cmdLineArgs.isReplaceCmd ) { // see common code in next block-of-code below
             } else if ( cmdLineArgs.isMacroCmd ) {   // see common code in next block-of-code below
             } else if ( cmdLineArgs.isBatchCmd ) {   // see common code in next block-of-code below
             } else {
             }
 
-            if (cmdLineArgs.isDelCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd || cmdLineArgs.isBatchCmd ) {
+            if (cmdLineArgs.isDelCmd || cmdLineArgs.isInsertCmd || cmdLineArgs.isReplaceCmd || cmdLineArgs.isMacroCmd || cmdLineArgs.isBatchCmd ) {
                 if (writer != null) {
                     if ( output instanceof LinkedHashMap) {
                         @SuppressWarnings("unchecked")
@@ -205,7 +207,7 @@ public class Cmd {
             } // if
 
             //======================================================================
-            // cleanup & close-out things.    This will actually do work for DELETE, REPLACE and MACRO commands
+            // cleanup & close-out things.    This will actually do work for DELETE, INSERT, REPLACE and MACRO commands
             if ( cmdLineArgs.outputFilePath.equals("-") ) {
                 // if we're writing to STDOUT/System.out ..
                 if (writer != null) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). See https://github.com/EsotericSoftware/yamlbeans/issues/111
@@ -290,6 +292,34 @@ public class Cmd {
             // writer.write( _data ); // The contents of java.util.LinkedHashMap<String, Object> has some YAML rows removed. so, dump it.
             return _data;
 
+        } else if ( _cmdLineArgs.isInsertCmd ) {
+            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd): loading @Insert-file: " + _cmdLineArgs.insertFilePath);
+            Object newContent = null;
+            if ( !_cmdLineArgs.insertFilePath.startsWith("@") ) {
+                // user provided a SIMPLE String as the RHS-new value
+                newContent = _cmdLineArgs.insertFilePath;
+            } else {
+                // user provided a FILE for new-content (instead of a simple-string)
+                try {
+                    final java.io.InputStream is2 = new java.io.FileInputStream( _cmdLineArgs.insertFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
+                    final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+                    // Leverage the wonderful com.esotericsoftware.yamlbeans to load insert-file
+                    // contents into a java.util.LinkedHashMap<String, Object>
+                    newContent = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+                    if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): Loaded INSERT-contents: [" + newContent.toString() + "]");
+                    reader2.close();
+                } catch (java.io.IOException e) {
+                    e.printStackTrace(System.err);
+                    System.err.println( CLASSNAME + ": processCommand(isInsertCmd): trouble with INSERT-File: '" + _cmdLineArgs.insertFilePath.substring(1) + "'.");
+                    System.exit(11);
+                }
+            } // if-else startsWith"@"
+            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
+            InsertYamlEntry inscmd = new InsertYamlEntry(_cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent);
+            inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
+            // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with new/insert strings. so, dump it.
+            return _data;
+
         } else if ( _cmdLineArgs.isReplaceCmd ) {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
             Object replContent = null;
@@ -299,12 +329,13 @@ public class Cmd {
             } else {
                 // user provided a FILE for replacement-content (instead of a simple-string)
                 try {
-                    final java.io.InputStream is2 = new java.io.FileInputStream( _cmdLineArgs.replaceFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
-                    final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
+                    final java.io.InputStream is3 = new java.io.FileInputStream( _cmdLineArgs.replaceFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
+                    final java.io.Reader reader3 = new java.io.InputStreamReader(is3);
                     // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file
                     // contents into a java.util.LinkedHashMap<String, Object>
-                    replContent = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
+                    replContent = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
                     if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): Loaded REPLACEMENT-contents: [" + replContent.toString() + "]");
+                    reader3.close();
                 } catch (java.io.IOException e) {
                     e.printStackTrace(System.err);
                     System.err.println( CLASSNAME + ": processCommand(isReplaceCmd): trouble with REPLACEMENT-File: '" + _cmdLineArgs.replaceFilePath.substring(1) + "'.");
@@ -313,7 +344,7 @@ public class Cmd {
             } // if-else startsWith"@"
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
             ReplaceYamlEntry replcmd = new ReplaceYamlEntry(_cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent);
-            replcmd.searchYamlForPattern(_data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
+            replcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return _data;
 
