@@ -605,8 +605,8 @@ final String _bInRecursion = "N/A";
 
         public String[] convStr2Array( final String _cmdStr, final LinkedHashMap<String,Properties> _allProps ) throws MacroYamlProcessor.MacroException, java.io.IOException {
             String cmdStrCompacted = _cmdStr.replaceAll("\\s\\s*", " "); // replace multiple spaces with a single space.
-            // cmdStrCompacted = cmdStrCompacted.strip(); // no need.  The _batchCmds already took care of it.
-            final String cmdStrNoMacros = MacroYamlProcessor.evaluateMacros( cmdStrCompacted, _allProps ).strip();
+            // cmdStrCompacted = cmdStrCompacted.trim(); // no need.  The _batchCmds already took care of it.
+            final String cmdStrNoMacros = MacroYamlProcessor.evaluateMacros( cmdStrCompacted, _allProps ).trim();
             // if ( this.verbose ) System.out.println( cmdStrCompacted );
 
             // https://mvnrepository.com/artifact/com.opencsv/opencsv
@@ -672,7 +672,7 @@ final String _bInRecursion = "N/A";
                                             throws BatchFileException, MacroYamlProcessor.MacroException, java.io.IOException
     {
         final String cmd_AsIs = _batchCmds.getCommand();
-        final String cmdStr2 = MacroYamlProcessor.evaluateMacros( cmd_AsIs, this.AllProps ).strip();
+        final String cmdStr2 = MacroYamlProcessor.evaluateMacros( cmd_AsIs, this.AllProps ).trim();
         if ( cmdStr2 == null )
             return null;
 

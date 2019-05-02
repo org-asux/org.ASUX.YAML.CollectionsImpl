@@ -245,20 +245,20 @@ public class BatchFileGrammer implements java.io.Serializable {
                 if (hashMatcher.find()) {
                     if ( this.verbose ) System.out.println( CLASSNAME +": openBatchFile(): I found the text "+ hashMatcher.group() +" starting at index "+  hashMatcher.start()+ " and ending at index "+ hashMatcher.end() );    
                     line = line.substring( 0, hashMatcher.start() );
-                    if ( _ok2TrimWhiteSpace ) line = line.strip(); // trim both leading and trailing whitespace
+                    if ( _ok2TrimWhiteSpace ) line = line.trim(); // trim both leading and trailing whitespace
                 }
                 Matcher slashMatcher    = slashPattern.matcher( line );
                 if (slashMatcher.find()) {
                     if ( this.verbose ) System.out.println( CLASSNAME +": openBatchFile(): I found the text "+ slashMatcher.group() +" starting at index "+  slashMatcher.start() +" and ending at index "+ slashMatcher.end() );    
                     line = line.substring( 0, slashMatcher.start() );
-                    if ( _ok2TrimWhiteSpace ) line = line.strip(); // trim both leading and trailing whitespace
+                    if ( _ok2TrimWhiteSpace ) line = line.trim(); // trim both leading and trailing whitespace
                 }
 
                 // after all the comment pre-processing above.. check if the line has become equivalent to empty-line.. 
                 emptyMatcher = emptyPattern.matcher( line ); // after all the above trimming, is the line pretty much whitespace?
                 if ( emptyMatcher.matches() ) continue;
 
-                if ( _ok2TrimWhiteSpace ) line = line.strip(); // trim both leading and trailing whitespace
+                if ( _ok2TrimWhiteSpace ) line = line.trim(); // trim both leading and trailing whitespace
                 if ( this.verbose ) System.out.println( CLASSNAME + ": openBatchFile(): TRIMMED line=[" + line +"]" );
                 this.lines.add( line );
             }
