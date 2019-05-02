@@ -55,23 +55,12 @@ public class BatchFileGrammer implements java.io.Serializable {
     public static final String FOREACHCMD = "foreach";
     // enum FileType { YAMLPROPERTIESFILE, BATCHFILE };
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    /** <p>The only constructor - public/private/protected</p>
-     *  @param _verbose Whether you want deluge of debug-output onto System.out.
-     */
-    public BatchFileGrammer(boolean _verbose) {
-        this.verbose = _verbose;
-    }
-
-    private BatchFileGrammer() { this.verbose = false;}
-
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //--------------------------------------------------------
     private final boolean verbose;
 
     private String fileName = null;
     private ArrayList<String> lines = new ArrayList<>();
-    private transient Iterator<String> iterator = null;
+    private transient Iterator<String> iterator = null;  // <<- transient class variable.  Will not be part of deepClone() method.
 
     private int currentLineNum = -1;
     private String currentLine = null;
@@ -84,6 +73,32 @@ public class BatchFileGrammer implements java.io.Serializable {
     private String saveTo = null;
     private String useAsInput = null;
     private String subBatchFile = null;
+
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /** <p>The only constructor - public/private/protected</p>
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     */
+    public BatchFileGrammer(boolean _verbose) {
+        this.verbose = _verbose;
+    }
+
+    private BatchFileGrammer() { this.verbose = false;}
+
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * After successfully opening a file.. you can get state-details (which point of the Batchfile are we at currently).
+     * @return something like: Batchfile [@mapsBatch1.txt] @ lime# 2 = [useAsInput @filename]
+     */
+    public String getState() {
+        if ( this.fileName == null || this.currentLine == null || this.currentLineNum <= 0 )
+            return "Batchfile ["+ this.fileName +"] is in invalid state";
+        else
+            return "Batchfile: ["+ this.fileName +"] @ line# "+ this.currentLineNum +" = ["+ this.currentLine +"]";
+    }
 
     /** This class aims to mimic java.util.Scanner's hasNextLine() and nextLine() and reset().<br>reset() has draconian-implications - as if openBatchFile() was never called!
      */
@@ -113,11 +128,9 @@ public class BatchFileGrammer implements java.io.Serializable {
     /** This class aims to mimic java.util.Scanner's hasNextLine() and nextLine().  Scanner has reset().  I prefer rewind().  reset() is still defined, but has draconian-implications - as if openBatchFile() was never called!
      */
     public void rewind() {
-        this.currentLine = null;
-        this.currentLineNum = -1;
-        this.iterator = null;
-
-        this.hasNextLine(); // will initialize all of the above 3 variables.
+        this.currentLineNum = 0; // Both -1 and 0 are invalid values.  1st line # is always === '1'.  That way it helps the user to debug batch-file issues.
+        this.currentLine = null; // ... why on earth is code expecting a valid value for currentLine without invoking next()?
+        this.iterator = this.lines.iterator();
 
         this.resetFlagsForEachLine();
     }
@@ -154,6 +167,10 @@ public class BatchFileGrammer implements java.io.Serializable {
         return this.fileName;
     }
 
+    public int getCommandCount()  {
+        return (this.lines != null) ? this.lines.size(): -1;
+    }
+
     //===========================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //===========================================================================
@@ -163,9 +180,7 @@ public class BatchFileGrammer implements java.io.Serializable {
     public boolean hasNextLine() {
         if ( this.lines == null ) return false;
         if ( this.iterator == null ) {
-            this.iterator = this.lines.iterator();
-            this.currentLineNum = 0; // Both -1 and 0 are invalid values.  1st line # is always === '1'.  That way it helps the user to debug batch-file issues.
-            this.currentLine = null; // ... why on earth is code expecting a valid value for currentLine without invoking next()?
+            this.rewind();
         }
         return this.iterator.hasNext();
     }
@@ -181,6 +196,7 @@ public class BatchFileGrammer implements java.io.Serializable {
         } else {
             this.currentLine = null; // dont create chaos in code in other CLASSES that invokes on hasNextLine() and nextLine()
             this.currentLineNum = -1;
+            // WARNING: Do not invoke this.rewind() or this.reset().  It will INCORRECTLY change the value of this.iterator
         }
         resetFlagsForEachLine(); // so that the isXXX() methods invoked of this class -- now that we're on NEW/NEXT line -- will NOT take a shortcut!
         this.determineCmdType();
@@ -190,9 +206,10 @@ public class BatchFileGrammer implements java.io.Serializable {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // *  @param _filetype whether its a Properties file or a Batch file (for use by yaml BATCH command).  Of ENUM TYPE 'FileType'
-    //===========================================================================
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    //===========================================================================
+    //==============================================================================
+
     /** As com.esotericsoftware.yamlBeans has some magic where Keys are NOT strings! ..
      *  In order for me to add new entries to the _map created by that library, I need to go thru hoops.
      *  @param _filename the full path to the file (don't assume relative paths will work ALL the time)
@@ -295,7 +312,7 @@ public class BatchFileGrammer implements java.io.Serializable {
         return this.whichCmd;
     }
 
-    //--------------------------------
+    //------------------------------------------------------------------------------
     public void determineCmdType() {
 
         this.resetFlagsForEachLine();
@@ -377,10 +394,6 @@ public class BatchFileGrammer implements java.io.Serializable {
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
-
-    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
-    // private Tools.Tuple<String,String> kv = null;
-
     /** This function helps detect if the current line pointed to by this.currentLine() contains a property entry (a.k.a. a KVPair entry of the form key=value)
      * @return either null.. or, the Key + Value (an instance of the Tools.Tuple class) detected in the current line of batch file
      */
@@ -389,33 +402,7 @@ public class BatchFileGrammer implements java.io.Serializable {
             return this.propertiesKV; // we've already executed the code below - SPECIFICALLY for the currentLine!
         else
             return null;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null )
-        //     return null;
-
-        // this.kv = null;
-        // try {
-        //     Pattern propsPattern = Pattern.compile( "^\\s*properties \\s*([a-zA-Z][a-zA-Z0-9]*)=(\\S\\S*)\\s*$" ); // empty line
-        //     Matcher propsMatcher    = propsPattern.matcher( line );
-        //     if (propsMatcher.find()) {
-        //         if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ propsMatcher.group() +" starting at index "+  propsMatcher.start() +" and ending at index "+ propsMatcher.end() );    
-        //         kv = new Tools.Tuple<String,String>( propsMatcher.group(1), propsMatcher.group(2) );
-        //                     // line.substring( propsMatcher.start(), propsMatcher.end() );
-        //         if ( this.verbose ) System.out.println( "\t KVPair=[" + kv.key +","+ kv.val +"]" );
-        //         this.whichCmd = BatchCmdType.Cmd_Properties;
-        //     }
-
-        // } catch (PatternSyntaxException e) {
-		// 	e.printStackTrace(System.err);
-		// 	System.err.println(CLASSNAME + ": getPropertyKV(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
-		// 	System.exit(91); // This is a serious failure. Shouldn't be happening.
-        // }
-
-        // return kv;
     }
-
-    //==================================
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a property entry (a.k.a. a Tools.KVPair entry of the form key=value)
      * @return either null.. or, the Key + Value (an instance of the Tools.Tuple class) detected in the current line of batch file
@@ -425,30 +412,7 @@ public class BatchFileGrammer implements java.io.Serializable {
             return this.printExpr; 
         else
             return null;
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return null;
-        // try {
-        //     Pattern printPattern = Pattern.compile( "^\\s*print\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-        //     Matcher printMatcher    = printPattern.matcher( line );
-        //     if (printMatcher.find()) {
-        //         if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ printMatcher.group() +" starting at index "+  printMatcher.start() +" and ending at index "+ printMatcher.end() );    
-        //         final String prexpr = printMatcher.group(1); // line.substring( printMatcher.start(), printMatcher.end() );
-        //         if ( this.verbose ) System.out.println( "\t print=[" + prexpr +"]" );
-        //         this.whichCmd = BatchCmdType.Cmd_Print;
-        //         return prexpr;
-        //     }
-		// } catch (PatternSyntaxException e) {
-		// 	e.printStackTrace(System.err);
-		// 	System.err.println(CLASSNAME + ": getPrintExpr(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
-		// 	System.exit(91); // This is a serious failure. Shouldn't be happening.
-        // }
-        // return null;
-
     }
-
-    //==================================
-    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
-    // private String sa = null;
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'saveTo ___' entry
      *  @return String the argument provided to the saveTo command (if no argument provided, this returns null - quiet &amp; graceful degradation)
@@ -458,30 +422,7 @@ public class BatchFileGrammer implements java.io.Serializable {
             return this.saveTo;
         else
             return null;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return null;
-        // try {
-        //     Pattern saveToPattern = Pattern.compile( "^\\s*saveTo\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-        //     Matcher saveToMatcher    = saveToPattern.matcher( line );
-        //     if (saveToMatcher.find()) {
-        //         if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ saveToMatcher.group() +" starting at index "+  saveToMatcher.start() +" and ending at index "+ saveToMatcher.end() );    
-        //         this.saveTo = saveToMatcher.group(1); // line.substring( saveToMatcher.start(), saveToMatcher.end() );
-        //         if ( this.verbose ) System.out.println( "\t SaveTo=[" + this.sa +"]" );
-        //         this.whichCmd = BatchCmdType.Cmd_SaveTo;
-        //         return this.sa;
-        //     }
-        // } catch (PatternSyntaxException e) {
-		// 	e.printStackTrace(System.err);
-		// 	System.err.println(CLASSNAME + ": getSaveTo(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
-		// 	System.exit(91); // This is a serious failure. Shouldn't be happening.
-        // }
-        // return null;
     }
-
-    //==================================
-    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
-    // private String uai = null;
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'useAsInput ___' entry
      *  @return String the argument provided to the useAsInput command (if no argument provided, this returns null - quiet &amp; graceful degradation)
@@ -491,30 +432,7 @@ public class BatchFileGrammer implements java.io.Serializable {
             return this.useAsInput;
         else
             return null;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return null;
-        // try {
-        //     Pattern useAsInputPattern = Pattern.compile( "^\\s*useAsInput\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-        //     Matcher useAsInputMatcher    = useAsInputPattern.matcher( line );
-        //     if (useAsInputMatcher.find()) {
-        //         if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ useAsInputMatcher.group() +" starting at index "+  useAsInputMatcher.start() +" and ending at index "+ useAsInputMatcher.end() );    
-        //         this.uai = useAsInputMatcher.group(1); // line.substring( useAsInputMatcher.start(), useAsInputMatcher.end() );
-        //         if ( this.verbose ) System.out.println( "\t useAsInput=[" + this.uai +"]" );
-        //         this.whichCmd = BatchCmdType.Cmd_UseAsInput;
-        //         return this.uai;
-        //     }
-		// } catch (PatternSyntaxException e) {
-		// 	e.printStackTrace(System.err);
-		// 	System.err.println(CLASSNAME + ": getUseAsInput(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
-		// 	System.exit(91); // This is a serious failure. Shouldn't be happening.
-        // }
-        // return null;
     }
-
-    //==================================
-    // This is a dirty trick to improve performance by caching.  This'll will work as long as the hasNextLine() and getNextLine() are the only way to get data from this class.
-    // private String sbl = null;
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'batch ___' entry - which will cause a SUB-BATCH cmd to be triggered
      *  @return String the argument provided to the Batch command (if no argument provided, this returns null - quiet &amp; graceful degradation)
@@ -524,25 +442,6 @@ public class BatchFileGrammer implements java.io.Serializable {
             return this.subBatchFile;
         else
             return null;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return null;
-        // try {
-        //     Pattern batchPattern = Pattern.compile( "^\\s*batch\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-        //     Matcher batchMatcher    = batchPattern.matcher( line );
-        //     if (batchMatcher.find()) {
-        //         if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ batchMatcher.group() +" starting at index "+  batchMatcher.start() +" and ending at index "+ batchMatcher.end() );    
-        //         this.subBatchFile = batchMatcher.group(1); // line.substring( batchMatcher.start(), batchMatcher.end() );
-        //         if ( this.verbose ) System.out.println( "\t batch=[" + this.subBatchFile +"]" );
-        //         this.whichCmd = BatchCmdType.Cmd_Batch;
-        //         return this.sbl;
-        //     }
-        // } catch (PatternSyntaxException e) {
-		// 	e.printStackTrace(System.err);
-		// 	System.err.println(CLASSNAME + ": getSubBatchFile(): Unexpected Internal ERROR, while checking for patterns for line= [" + line +"]" );
-		// 	System.exit(91); // This is a serious failure. Shouldn't be happening.
-        // }
-        // return null;
     }
 
     //==================================
@@ -552,33 +451,20 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public boolean isForEachLine() {
         if ( this.whichCmd == BatchCmdType.Cmd_Foreach )
-            return true; // I do NOT want to be too overconfident about these boolean class-variables, especially when the logic in this function is SO SIMPLE!
+            return true;
         else
             return false;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return false;
-        // final boolean b = line.equalsIgnoreCase( FOREACHCMD );
-        // this.whichCmd = BatchCmdType.Cmd_Foreach;
-        // return b;
     }
 
-    //==================================
     /** This function helps detect if the current line pointed to by this.currentLine() contains just the word 'end' (nothing else other than comments and whitespace)
      * This keyword 'end' indicates the END of the looping-construct within the batch file
      * @return true of false, if 'end' was detected in the current line of batch file
      */
     public boolean isEndLine() {
         if ( this.whichCmd == BatchCmdType.Cmd_End )
-            return true; // I do NOT want to be too overconfident about these boolean class-variables, especially when the logic in this function is SO SIMPLE!
+            return true;
         else
             return false;
-
-        // final String line = this.currentLine(); // remember the line is most likely already trimmed
-        // if ( line == null ) return false;
-        // final boolean b = line.equalsIgnoreCase("end");
-        // this.whichCmd = BatchCmdType.Cmd_End;
-        // return b;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -614,7 +500,10 @@ public class BatchFileGrammer implements java.io.Serializable {
         }
     }
 
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
     /** This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
      *  @param _orig what you want to deep-clone
      *  @return a deep-cloned copy, created by serializing into a ByteArrayOutputStream and reading it back (leveraging ObjectOutputStream)
@@ -646,7 +535,9 @@ public class BatchFileGrammer implements java.io.Serializable {
         }
     }
 
-        //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
     // For unit-testing purposes only
     public static void main(String[] args) {
         try {
