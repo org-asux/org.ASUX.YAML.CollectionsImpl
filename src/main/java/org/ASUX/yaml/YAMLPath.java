@@ -88,6 +88,17 @@ public class YAMLPath implements Serializable {
 
     protected int indexPtr = -1;
 
+    /**
+     * Ths function will ensure this object behaves as if.. you are going to call hasNext() and next() for the 1st time (on this specific instance/object).
+     */
+    public void rewind() {
+        this.indexPtr = 0;
+    }
+
+    //=======================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
+
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by the default DELIMITER = "."</p>
      *  <p>Special case: <code>"**"</code> represents a deviation of java.util.regexp specs on what qualifies as a regular-expression.  This deviation is a very human-friendly easy-2-understand need.</p>
@@ -96,6 +107,10 @@ public class YAMLPath implements Serializable {
     public YAMLPath(String _yp) {
         this(_yp, DEFAULTDELIMITER);
     }
+
+    //=======================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by DELIMITER</p>
@@ -153,7 +168,10 @@ public class YAMLPath implements Serializable {
         this.indexPtr = (this.yamlElemArr.length > 0) ? 0 : -1;
     } // Constructor
 
+    //=======================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
+
     /** Whether the instance of this class is valid (in case you are passed this object by some other code, this is your sanity check).. .. before you invoke any of the other functions in ths class and end up with runtime errors
      *  @return true means all the methods in this class are GUARANTEED to NOT Throw any runtime exception :-)
      */
@@ -187,6 +205,23 @@ public class YAMLPath implements Serializable {
         }
         return;
     }
+
+
+    /** For example strings like "<code>paths.*.*.responses.200</code>", this will make this object point to the last element"<code>200</code>"".
+     */
+    public void skip2end() {
+        if ( ! this.isValid ) return;
+        // if ( this.index() >= this.yamlElemArr.length ) // perhaps we fully iterated this.hasNext() to the end .. already.
+        //     this.rewind();
+        // for ( int ix=index(); ix< this.yamlElemArr.length; ix++ )
+        //     ypNoMatches.next(); // if we loop all the way to 'this.yamlElemArr.length' then we'll end up with this,index() pointing WELL beyond the 
+        this.indexPtr = this.yamlElemArr.length - 1;
+        return;
+    }
+
+    //=======================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
 
     /** For example strings like "<code>paths.*.*.responses.200</code>", after your first call to next(), this will return "paths".  For the 2nd call to next(), this function will return "*".  After you call next() a 5th time(or more), this function will return null(String).
      *  @return a string that does NOT have periods/dots/delimiter in it.  The string may be (based on example above) = "*".
@@ -265,7 +300,19 @@ public class YAMLPath implements Serializable {
         }
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    /**
+     * Implements the Object.toString() operation .. in a superior manner for debugging.
+     */
+    public String toString() {
+        if ( this.isValid )
+            return this.getPrefix() +"\t"+ this.getSuffix() +"@"+ this.index();
+        else
+            return "Invalid object of "+CLASSNAME;
+    }
+
+    //=======================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
 
     /** This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
      *  @param _orig what you want to deep-clone
@@ -287,17 +334,9 @@ public class YAMLPath implements Serializable {
         }
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    /**
-     * Implements the Object.toString() operation .. in a superior manner for debugging.
-     */
-    public String toString() {
-        if ( this.isValid )
-            return this.getPrefix() +"\t"+ this.getSuffix() +"@"+ this.index();
-        else
-            return "Invalid object of "+CLASSNAME;
-    }
+    //=======================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=======================================================================
 
     /** This equality function is needed for efficient processing within InsertYamlProcessor.java.
      *  This function does NOT assume any common objects/strings.  It does a TRUE value-based comparison.
