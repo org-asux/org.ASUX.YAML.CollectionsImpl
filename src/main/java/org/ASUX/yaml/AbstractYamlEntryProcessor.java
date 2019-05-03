@@ -411,6 +411,17 @@ public abstract class AbstractYamlEntryProcessor {
 
         } // for loop   key: _map.keySet()
 
+        if (  !   aMatchFound ) {
+            // Not a single end2end match.  At best .. we can HOPE THAT we only had partial matches.
+            // Specifically, when the YAMLPath is A.B.C.D (4-levels deep) and the YAML itself it < 4-levels deep.. we need to address such a scenario.
+            // This above scenario.. in case of InsertYamlProcessor.java.. allows it to do the equivalent of 'mkdir -p'.
+            if ( this.verbose ) System.err.println(CLASSNAME +": recursiveSearch(): Not a single match for '"+ _yamlPath.toString() +"'");
+            onMatchFail(_map, _yamlPath, _yamlPath.yamlElemArr[ _yamlPath.yamlElemArr.length - 1 ], null, null); // location #2 for failure-2-match
+            // final YAMLPath ypNoMatches = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact within this function.. as it's passed by reference into this function.
+            // ypNoMatches.skip2end();
+            // onMatchFail(_map, ypNoMatches, ypNoMatches.yamlElemArr[ ypNoMatches.yamlElemArr.length - 1 ], null, null); // location #2 for failure-2-match
+        }
+
         // Now that we looped thru all keys at current recursion level..
         // .. for now nothing to do here.
 
