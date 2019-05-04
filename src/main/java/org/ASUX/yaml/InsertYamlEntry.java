@@ -65,7 +65,13 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         super( _verbose, _showStats );
         if ( _r == null )
             throw new Exception( CLASSNAME + ": constructor(): _r parameter is Null");
-        if ( ! (_r instanceof java.lang.String) && ! (_r instanceof java.util.LinkedHashMap ) )
+
+        if (_r instanceof java.lang.String) {
+            // Convert Strings into YAML/JSON compatible LinkedHashMap .. incl. converting Key=Value  --> Key: Value
+            _r = new Tools(this.verbose).JSONString2YAML( _r.toString() );
+        } else if (_r instanceof java.util.LinkedHashMap ) {
+            // Do Nothing
+        } else
             throw new Exception( CLASSNAME + ": constructor(): Invalid _r parameter of type:" + _r.getClass().getName() + "'");
 
         this.newData2bInserted = _r;
@@ -136,7 +142,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             tpl.val.remove(tpl.key);
 
             // Now put in a new entry - with the replacement data!
-            tpl.val.put( tpl.key, ReplaceYamlEntry.deepClone( this.newData2bInserted ) );
+            tpl.val.put( tpl.key, Tools.deepClone( this.newData2bInserted ) );
             // If there are multiple matches.. then without deepclone, the EsotericSoftware
             // library, will use "&1" to define your 1st copy (in output) and put "*1" in
             // all other locations this replacement text WAS SUPPOSED have been :-(
