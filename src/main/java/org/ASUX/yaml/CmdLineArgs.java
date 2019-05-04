@@ -122,7 +122,7 @@ public class CmdLineArgs {
             macroCmdOpt.setOptionalArg(false);
             macroCmdOpt.setArgs(1);
             macroCmdOpt.setArgName("propertiesFile");
-        Option insCmdOpt = new Option("i", INSERTCMD, true, "insert new element (json-string parameter) @ the locations identified by the YAML path");
+        Option insCmdOpt = new Option("n", INSERTCMD, true, "insert new element (json-string parameter) @ the locations identified by the YAML path");
             insCmdOpt.setOptionalArg(false);
             insCmdOpt.setArgs(2);
             insCmdOpt.setValueSeparator(' ');
