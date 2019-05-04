@@ -80,11 +80,13 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths)
     {
-        if ( this.verbose ) {
-            System.out.print( CLASSNAME +": onEnd2EndMatch: _end2EndPaths =");
+        if ( this.verbose )
+            System.out.print("onEnd2EndMatch: _end2EndPaths =");
+        if ( this.verbose || this.showStats ) {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
         }
+
         this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
         if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
@@ -117,7 +119,10 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
         if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );
-        if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
+
+        // This IF-Statement line below is Not outputting the entire YAML-Path.  So, I'm relying on onEnd2EndMatch() to do the job.
+        // Not a squeeky clean design (as summary should be done at end only).. but it avoids having to add additional data structures
+        // if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
