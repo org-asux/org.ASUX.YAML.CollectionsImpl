@@ -218,8 +218,13 @@ public class MacroYamlProcessor {
 				found = true;
 				// System.out.println("I found the text "+matcher.group()+" starting at index "+  matcher.start()+" and ending at index "+matcher.end());    
 				retstr += _s.substring( prevIndex, matcher.start() );
-				final String v = _props.getProperty( matcher.group(1) ); // lookup value for ${ASUX::__} and add it to retStr
-				retstr += v;
+				final String macroStr = matcher.group(1);
+				final String v = _props.getProperty( macroStr ); // lookup value for ${ASUX::__} and add it to retStr
+
+				if ( v == null )
+					retstr += "${ASUX::"+ macroStr +"}"; // we are NOT going to replace      ${ASUX::unknownVARIABLE}      with        null
+				else
+					retstr += v;
 				prevIndex = matcher.end();
 				// System.out.println( CLASSNAME + ": Matched: "+matcher.group(1)+" to ["+ v +"]@ index "+ matcher.start()+" and ending @ "+matcher.end());
 			}
@@ -258,15 +263,15 @@ public class MacroYamlProcessor {
 	public static String evaluateMacros( final String _s, final LinkedHashMap<String,Properties> _propsSet )
 						throws MacroYamlProcessor.MacroException
 	{
+		String retStr = _s;
 		for( String key: _propsSet.keySet() ) {
 			final Properties p = _propsSet.get(key);
-			final String rstr = evaluateMacros(_s, p);
-			if ( rstr != null )
-				return rstr;
-			// else
-			// 	continue;
+			final String newstr = evaluateMacros( retStr, p);
+			if ( newstr != null ) // this can happen if the _s is just the MACRO only.  Example:    ${ASUX::variable}
+				retStr = newstr;
+			// We can have multiple variables, for which values can be in different properties files
 		}
-		return null;
+		return retStr;
 	}
 
 }
