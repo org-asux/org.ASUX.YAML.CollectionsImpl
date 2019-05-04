@@ -52,8 +52,14 @@ public class BatchFileGrammer implements java.io.Serializable {
 
     private static final long serialVersionUID = 5L;
     public static final String CLASSNAME = "org.ASUX.yaml.BatchFileGrammer";
-    public static final String FOREACHCMD = "foreach";
-    // enum FileType { YAMLPROPERTIESFILE, BATCHFILE };
+    public static final String FOREACH_PROPERTIES = "foreachCMD.properties";
+    public static final String GLOBALVARIABLES = "GLOBAL.VARIABLES";
+    public static final String SYSTEM_ENV = "System.env";
+
+	private static String REGEXP_NAMESUFFIX = "[${}@%a-zA-Z0-9\\.,:_/-]+";
+	private static String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
+	private static String REGEXP_FILENAME = "[a-zA-Z./]" + REGEXP_NAMESUFFIX;
+	private static String REGEXP_OBJECT_REFERENCE = "[@!]?" + REGEXP_FILENAME;
 
     //--------------------------------------------------------
     private final boolean verbose;
@@ -65,14 +71,16 @@ public class BatchFileGrammer implements java.io.Serializable {
     private int currentLineNum = -1;
     private String currentLine = null;
 
-    enum BatchCmdType { Cmd_Properties, Cmd_Print, Cmd_SaveTo, Cmd_UseAsInput, Cmd_Foreach, Cmd_End, Cmd_Batch, Cmd_Any };
+    enum BatchCmdType { Cmd_Properties, Cmd_SetProperty, Cmd_Print, Cmd_SaveTo, Cmd_UseAsInput, Cmd_MakeNewRoot, Cmd_Foreach, Cmd_End, Cmd_Batch, Cmd_Sleep, Cmd_Any };
     private BatchCmdType whichCmd = BatchCmdType.Cmd_Any;
 
     private Tools.Tuple<String,String> propertiesKV = null;
     private String printExpr = null;
     private String saveTo = null;
     private String useAsInput = null;
+    private String makeNewRoot = null;
     private String subBatchFile = null;
+    private int sleepDuration = 1; // === 1millisecond.  Precaution: So that by mistake we do Not end up calling sleep(0), which is forever.
 
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -121,7 +129,9 @@ public class BatchFileGrammer implements java.io.Serializable {
         this.printExpr = null;
         this.saveTo = null;
         this.useAsInput = null;
+        this.makeNewRoot = null;
         this.subBatchFile = null;
+        this.sleepDuration = 1; // 1millisecond.  Precaution: So that by mistake we do Not end up calling sleep(0), which is forever.
     }
 
     //---------------------------------
@@ -200,6 +210,8 @@ public class BatchFileGrammer implements java.io.Serializable {
         }
         resetFlagsForEachLine(); // so that the isXXX() methods invoked of this class -- now that we're on NEW/NEXT line -- will NOT take a shortcut!
         this.determineCmdType();
+        if ( this.verbose ) System.out.println( CLASSNAME +": nextLine(): "+ this.whichCmd.toString() +"\t @ currentLineNum " + this.currentLineNum +" = "+ this.currentLine );
+
         return this.currentLine;
     }
 
@@ -320,8 +332,40 @@ public class BatchFileGrammer implements java.io.Serializable {
         if ( line == null )
             return;
 
+        if ( this.verbose ) System.out.println( CLASSNAME +": determineCmdType(): Line#=[" + this.currentLineNum +"] =[" + line +"] " );
+
         try {
-            Pattern propsPattern = Pattern.compile( "^\\s*properties \\s*([a-zA-Z][a-zA-Z0-9]*)=(\\S\\S*)\\s*$" ); // empty line
+            Pattern makeNewRootPattern = Pattern.compile( "^\\s*makeNewRoot\\s+("+ REGEXP_NAME +")\\s*$" );
+            Matcher makeNewRootMatcher    = makeNewRootPattern.matcher( line );
+            if (makeNewRootMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ makeNewRootMatcher.group() +" starting at index "+  makeNewRootMatcher.start() +" and ending at index "+ makeNewRootMatcher.end() );    
+                this.makeNewRoot = makeNewRootMatcher.group(1); // line.substring( makeNewRootMatcher.start(), makeNewRootMatcher.end() );
+                if ( this.verbose ) System.out.println( "\t makeNewRoot=[" + this.makeNewRoot +"]" );
+                this.whichCmd = BatchCmdType.Cmd_MakeNewRoot;
+                return;
+            }
+
+            Pattern batchPattern = Pattern.compile( "^\\s*batch\\s+("+ REGEXP_FILENAME +")\\s*$" );
+            Matcher batchMatcher    = batchPattern.matcher( line );
+            if (batchMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ batchMatcher.group() +" starting at index "+  batchMatcher.start() +" and ending at index "+ batchMatcher.end() );    
+                this.subBatchFile = batchMatcher.group(1); // line.substring( batchMatcher.start(), batchMatcher.end() );
+                if ( this.verbose ) System.out.println( "\t batch=[" + this.subBatchFile +"]" );
+                this.whichCmd = BatchCmdType.Cmd_Batch;
+                return;
+            }
+
+			if ( line.equalsIgnoreCase( "foreach" ) ) {
+				this.whichCmd = BatchCmdType.Cmd_Foreach;
+				return;
+			}
+
+			if ( line.equalsIgnoreCase("end") ) {
+				this.whichCmd = BatchCmdType.Cmd_End;
+				return;
+			}
+
+            Pattern propsPattern = Pattern.compile( "^\\s*properties\\s+("+ REGEXP_NAME +")=("+ REGEXP_FILENAME +")\\s*$" );
             Matcher propsMatcher    = propsPattern.matcher( line );
             if (propsMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ propsMatcher.group() +" starting at index "+  propsMatcher.start() +" and ending at index "+ propsMatcher.end() );    
@@ -332,7 +376,18 @@ public class BatchFileGrammer implements java.io.Serializable {
 				return;
             }
 
-            Pattern printPattern = Pattern.compile( "^\\s*print\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
+            Pattern setPropPattern = Pattern.compile( "^\\s*setProperty\\s+("+ REGEXP_NAME +")=("+ REGEXP_NAME +")\\s*$" );
+            Matcher setPropMatcher    = setPropPattern.matcher( line );
+            if (setPropMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ setPropMatcher.group() +" starting at index "+  setPropMatcher.start() +" and ending at index "+ setPropMatcher.end() );    
+                this.propertiesKV = new Tools.Tuple<String,String>( setPropMatcher.group(1), setPropMatcher.group(2) );
+                            // line.substring( setPropMatcher.start(), setPropMatcher.end() );
+                if ( this.verbose ) System.out.println( "\t KVPair=[" + this.propertiesKV.key +","+ this.propertiesKV.val +"]" );
+                this.whichCmd = BatchCmdType.Cmd_SetProperty;
+				return;
+            }
+
+            Pattern printPattern = Pattern.compile( "^\\s*print\\s+(\\S.*\\S)\\s*$" );
             Matcher printMatcher    = printPattern.matcher( line );
             if (printMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ printMatcher.group() +" starting at index "+  printMatcher.start() +" and ending at index "+ printMatcher.end() );    
@@ -342,7 +397,7 @@ public class BatchFileGrammer implements java.io.Serializable {
                 return ;
             }
 
-            Pattern saveToPattern = Pattern.compile( "^\\s*saveTo\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
+            Pattern saveToPattern = Pattern.compile( "^\\s*saveTo\\s+("+ REGEXP_OBJECT_REFERENCE +")\\s*$" );
             Matcher saveToMatcher    = saveToPattern.matcher( line );
             if (saveToMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ saveToMatcher.group() +" starting at index "+  saveToMatcher.start() +" and ending at index "+ saveToMatcher.end() );    
@@ -352,7 +407,7 @@ public class BatchFileGrammer implements java.io.Serializable {
                 return;
             }
 
-            Pattern useAsInputPattern = Pattern.compile( "^\\s*useAsInput\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
+            Pattern useAsInputPattern = Pattern.compile( "^\\s*useAsInput\\s+("+ REGEXP_OBJECT_REFERENCE +")\\s*$" );
             Matcher useAsInputMatcher    = useAsInputPattern.matcher( line );
             if (useAsInputMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ useAsInputMatcher.group() +" starting at index "+  useAsInputMatcher.start() +" and ending at index "+ useAsInputMatcher.end() );    
@@ -362,25 +417,15 @@ public class BatchFileGrammer implements java.io.Serializable {
                 return;
             }
 
-            Pattern batchPattern = Pattern.compile( "^\\s*batch\\s\\s*(\\S.*\\S)\\s*$" ); // empty line
-            Matcher batchMatcher    = batchPattern.matcher( line );
-            if (batchMatcher.find()) {
-                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ batchMatcher.group() +" starting at index "+  batchMatcher.start() +" and ending at index "+ batchMatcher.end() );    
-                this.subBatchFile = batchMatcher.group(1); // line.substring( batchMatcher.start(), batchMatcher.end() );
-                if ( this.verbose ) System.out.println( "\t batch=[" + this.subBatchFile +"]" );
-                this.whichCmd = BatchCmdType.Cmd_Batch;
+            Pattern sleepPattern = Pattern.compile( "^\\s*sleep\\s+(\\d\\d*)\\s*$" );
+            Matcher sleepMatcher    = sleepPattern.matcher( line );
+            if (sleepMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ sleepMatcher.group() +" starting at index "+  sleepMatcher.start() +" and ending at index "+ sleepMatcher.end() );    
+                this.sleepDuration = Integer.parseInt( sleepMatcher.group(1) ); // line.substring( sleepMatcher.start(), sleepMatcher.end() );
+                if ( this.verbose ) System.out.println( "\t sleep=[" + this.sleepDuration +"]" );
+                this.whichCmd = BatchCmdType.Cmd_Sleep;
                 return;
             }
-
-			if ( line.equalsIgnoreCase( FOREACHCMD ) ) {
-				this.whichCmd = BatchCmdType.Cmd_Foreach;
-				return;
-			}
-
-			if ( line.equalsIgnoreCase("end") ) {
-				this.whichCmd = BatchCmdType.Cmd_End;
-				return;
-			}
 
             return;
 
@@ -398,7 +443,7 @@ public class BatchFileGrammer implements java.io.Serializable {
      * @return either null.. or, the Key + Value (an instance of the Tools.Tuple class) detected in the current line of batch file
      */
     public Tools.Tuple<String,String> getPropertyKV() {
-        if ( this.whichCmd == BatchCmdType.Cmd_Properties )
+        if ( this.whichCmd == BatchCmdType.Cmd_Properties || this.whichCmd == BatchCmdType.Cmd_SetProperty )
             return this.propertiesKV; // we've already executed the code below - SPECIFICALLY for the currentLine!
         else
             return null;
@@ -415,7 +460,7 @@ public class BatchFileGrammer implements java.io.Serializable {
     }
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'saveTo ___' entry
-     *  @return String the argument provided to the saveTo command (if no argument provided, this returns null - quiet &amp; graceful degradation)
+     *  @return String the argument provided to the saveTo command
      */
     public String getSaveTo() {
         if ( this.whichCmd == BatchCmdType.Cmd_SaveTo)
@@ -425,7 +470,7 @@ public class BatchFileGrammer implements java.io.Serializable {
     }
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'useAsInput ___' entry
-     *  @return String the argument provided to the useAsInput command (if no argument provided, this returns null - quiet &amp; graceful degradation)
+     *  @return String the argument provided to the useAsInput command
      */
     public String getUseAsInput() {
         if ( this.whichCmd == BatchCmdType.Cmd_UseAsInput )
@@ -434,14 +479,34 @@ public class BatchFileGrammer implements java.io.Serializable {
             return null;
     }
 
+    /** This function helps detect if the current line pointed to by this.currentLine() contains a 'makeNewRoot ___' entry
+     *  @return String the argument provided to the makeNewRoot command
+     */
+    public String getMakeNewRoot() {
+        if ( this.whichCmd == BatchCmdType.Cmd_MakeNewRoot )
+            return this.makeNewRoot;
+        else
+            return null;
+    }
+
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'batch ___' entry - which will cause a SUB-BATCH cmd to be triggered
-     *  @return String the argument provided to the Batch command (if no argument provided, this returns null - quiet &amp; graceful degradation)
+     *  @return String the argument provided to the Batch command 
      */
     public String getSubBatchFile() {
         if ( this.whichCmd == BatchCmdType.Cmd_Batch )
             return this.subBatchFile;
         else
             return null;
+    }
+
+    /** This function helps detect if the current line pointed to by this.currentLine() contains a 'sleep ___' entry - which will cause the Batch-file-processing to take a quick nap as directed.
+     *  @return String the argument provided to the 'sleep' command
+     */
+    public int getSleepDuration() {
+        if ( this.whichCmd == BatchCmdType.Cmd_Sleep )
+            return this.sleepDuration;
+        else
+            return 1; // === 1millisecond.  Precaution: So that by mistake we do Not end up calling sleep(0), which is forever.
     }
 
     //==================================
@@ -475,11 +540,11 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public String getCommand() {
         if ( this.whichCmd != BatchCmdType.Cmd_Any )
-            return null; // Since.. It is one of the above commands like: properties, saveAs, foreach, end, useAsInput, .. ..
+            return null; // Since.. It is one of the above commands like: properties, saveAs, foreach, end, useAsInput, makeNewRoot, .. ..
 
         try {
             final java.util.Scanner scanner = new java.util.Scanner( this.currentLine() );
-            scanner.useDelimiter("\\s\\s*");
+            scanner.useDelimiter("\\s+");
 
             if (scanner.hasNext()) { // default whitespace delimiter used by a scanner
                 final String cmd = scanner.next();
