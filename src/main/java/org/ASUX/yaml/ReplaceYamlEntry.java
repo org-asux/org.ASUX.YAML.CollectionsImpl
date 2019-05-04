@@ -36,12 +36,6 @@ package org.ASUX.yaml;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ObjectOutputStream;
-import java.io.ObjectInputStream;
-import java.io.IOException;
-
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
@@ -98,8 +92,9 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onEnd2EndMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        if ( this.verbose ) {
+        if ( this.verbose )
             System.out.print("onEnd2EndMatch: _end2EndPaths =");
+        if ( this.verbose || this.showStats ) {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
         }
@@ -133,39 +128,19 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
             tpl.val.remove(tpl.key);
 
             // Now put in a new entry - with the replacement data!
-            tpl.val.put( tpl.key, ReplaceYamlEntry.deepClone(this.replacementData) );
-            // If there are multiple matches.. then without deepclone, the EsotericSoftware
-            // library, will use "&1" to define your 1st copy (in output) and put "*1" in
+            tpl.val.put( tpl.key, Tools.deepClone(this.replacementData) );
+            // If there are multiple matches.. then without Tools.deepclone, the com.esotericSoftware
+            // YAML library, will use "&1" to define your 1st copy (in output) and put "*1" in
             // all other locations this replacement text WAS SUPPOSED have been :-(
         }
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
         if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );
-        if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
+
+        // This IF-Statement line below is Not outputting the entire YAML-Path.  So, I'm relying on onEnd2EndMatch() to do the job.
+        // Not a squeeky clean design (as summary should be done at end only).. but it avoids having to add additional data structures
+        // if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    /** This deepClone function is unnecessary, if you can invoke org.apache.commons.lang3.SerializationUtils.clone(this)
-     *  @param _orig what you want to deep-clone
-     *  @return a deep-cloned copy, created by serializing into a ByteArrayOutputStream and reading it back (leveraging ObjectOutputStream)
-     */
-    public static Object deepClone(Object _orig) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(_orig);
-            
-            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-            ObjectInputStream ois = new ObjectInputStream(bais);
-            return ois.readObject();
-        } catch (IOException e) {
-            e.printStackTrace(System.err);
-            return null;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
-    }
 
 }
