@@ -32,18 +32,18 @@
 
 package org.ASUX.yaml;
 
+import java.io.InputStreamReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-//import java.util.Map;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Properties;
-
-import javax.xml.transform.OutputKeys;
-
-//import java.util.regex.*;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -106,6 +106,17 @@ public class Cmd {
         this.verbose = _verbose;
     }
 
+    private LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = null;
+
+    /**
+     * This allows Cmd.java to interact better with BatchYamlProcessor.java, which is the authoritative source of all "saveAs" outputs.
+     * Cmd.java will use this object (this.savedOutputMaps) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
+     * @param _savedOutputMaps
+     */
+    public void setSavedOutputMaps( final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps ) {
+        this.savedOutputMaps = _savedOutputMaps;
+    }
+
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
@@ -165,15 +176,6 @@ public class Cmd {
             // run the command requested by user
             final Object output = cmd.processCommand( cmdLineArgs, data );
 
-            // if ( output instanceof ArrayList ) {
-            //     // for now do nothing.
-            // } else if ( output instanceof java.util.LinkedHashMap ) {
-            //     // for now do nothing.
-            // } else {
-            //     System.err.println("Internal error: unable to process output from cmd.processCommand() of type ["+ output.getClass().getName() +"]");
-            //     System.exit(14);
-            // }
-
             //======================================================================
             // post completion of YAML processing
             if ( cmdLineArgs.isReadCmd ) {
@@ -187,10 +189,10 @@ public class Cmd {
                 // arr.forEach( s -> System.out.println( s ) );
                 writer.write( arr );
             } else if ( cmdLineArgs.isDelCmd ) {
-            } else if ( cmdLineArgs.isInsertCmd ) { // see common code in next block-of-code below
-            } else if ( cmdLineArgs.isReplaceCmd ) { // see common code in next block-of-code below
-            } else if ( cmdLineArgs.isMacroCmd ) {   // see common code in next block-of-code below
-            } else if ( cmdLineArgs.isBatchCmd ) {   // see common code in next block-of-code below
+            } else if ( cmdLineArgs.isInsertCmd )   { // see common code in next block-of-code below
+            } else if ( cmdLineArgs.isReplaceCmd )  { // see common code in next block-of-code below
+            } else if ( cmdLineArgs.isMacroCmd )    {   // see common code in next block-of-code below
+            } else if ( cmdLineArgs.isBatchCmd )    {   // see common code in next block-of-code below
             } else {
             }
 
@@ -233,9 +235,6 @@ public class Cmd {
                     System.exit(103);
                 }
             }
-
-
-
 
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             e.printStackTrace(System.err);
@@ -293,74 +292,24 @@ public class Cmd {
             return _data;
 
         } else if ( _cmdLineArgs.isInsertCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd): loading @Insert-file: " + _cmdLineArgs.insertFilePath);
-            Object newContent = null;
-            if ( !_cmdLineArgs.insertFilePath.startsWith("@") ) {
-                // user provided a SIMPLE String as the RHS-new value
-                newContent = _cmdLineArgs.insertFilePath;
-            } else {
-                // user provided a FILE for new-content (instead of a simple-string)
-                try {
-                    final java.io.InputStream is2 = new java.io.FileInputStream( _cmdLineArgs.insertFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
-                    final java.io.Reader reader2 = new java.io.InputStreamReader(is2);
-                    // Leverage the wonderful com.esotericsoftware.yamlbeans to load insert-file
-                    // contents into a java.util.LinkedHashMap<String, Object>
-                    newContent = new com.esotericsoftware.yamlbeans.YamlReader(reader2).read(LinkedHashMap.class);
-                    if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): Loaded INSERT-contents: [" + newContent.toString() + "]");
-                    reader2.close();
-                } catch (java.io.IOException e) {
-                    e.printStackTrace(System.err);
-                    System.err.println( CLASSNAME + ": processCommand(isInsertCmd): trouble with INSERT-File: '" + _cmdLineArgs.insertFilePath.substring(1) + "'.");
-                    System.exit(11);
-                }
-            } // if-else startsWith"@"
+            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & loading @Insert-file: " + _cmdLineArgs.insertFilePath);
+            final Object newContent = Cmd.getDataFromReference( this.verbose, _cmdLineArgs.insertFilePath, this.savedOutputMaps);
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
-            InsertYamlEntry inscmd = new InsertYamlEntry(_cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent);
-            inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
+            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent );
+            inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with new/insert strings. so, dump it.
             return _data;
 
         } else if ( _cmdLineArgs.isReplaceCmd ) {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
-            Object replContent = null;
-            if ( !_cmdLineArgs.replaceFilePath.startsWith("@") ) {
-                // user provided a SIMPLE String as the RHS-replacement value
-                replContent = _cmdLineArgs.replaceFilePath;
-            } else {
-                // user provided a FILE for replacement-content (instead of a simple-string)
-                try {
-                    final java.io.InputStream is3 = new java.io.FileInputStream( _cmdLineArgs.replaceFilePath.substring(1) ); // remove '@' as the 1st character in the user's input
-                    final java.io.Reader reader3 = new java.io.InputStreamReader(is3);
-                    // Leverage the wonderful com.esotericsoftware.yamlbeans to load replace-file
-                    // contents into a java.util.LinkedHashMap<String, Object>
-                    replContent = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
-                    if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): Loaded REPLACEMENT-contents: [" + replContent.toString() + "]");
-                    reader3.close();
-                } catch (java.io.IOException e) {
-                    e.printStackTrace(System.err);
-                    System.err.println( CLASSNAME + ": processCommand(isReplaceCmd): trouble with REPLACEMENT-File: '" + _cmdLineArgs.replaceFilePath.substring(1) + "'.");
-                    System.exit(11);
-                }
-            } // if-else startsWith"@"
+            final Object replContent = Cmd.getDataFromReference( this.verbose, _cmdLineArgs.replaceFilePath, this.savedOutputMaps);
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
-            ReplaceYamlEntry replcmd = new ReplaceYamlEntry(_cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent);
-            replcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter);
+            ReplaceYamlEntry replcmd = new ReplaceYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent );
+            replcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return _data;
 
-        // This (below) WILL NOT work .. as the --inputfile has already been opened for READING !!as YAML-content!! by Cmd.main, and it will throw error as JSON file is NOT in YAML format.
-        // instead: we've a simple workaround: Instead of asux yaml fromJSON <jsonFile> -o -
-        //      .. Simply do:    asux yaml batch 'useAsInput <jsonFile>' -i /dev/null -o -
-        // } else if ( _cmdLineArgs.isFromJSONCmd ) {
-        //     final java.io.InputStream is3 = new java.io.FileInputStream( _cmdLineArgs.inputFilePath ); // remove '@' as the 1st character in the user's input
-        //     final java.io.Reader reader3 = new java.io.InputStreamReader(is3);
-        //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
-        //     final LinkedHashMap<String, Object> retMap = new com.google.gson.Gson().fromJson(
-        //                     reader3,
-        //                     new TypeToken< LinkedHashMap<String, Object> >() {}.getType()
-        //                 );
-
-    } else if ( _cmdLineArgs.isMacroCmd ) {
+        } else if ( _cmdLineArgs.isMacroCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             final Properties properties = new Properties();
             if (_cmdLineArgs.propertiesFilePath != null) {
@@ -389,6 +338,129 @@ public class Cmd {
             throw new Exception( es );
         }
         // return null; // should Not reach here!
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    /**
+     * 
+     * @param _verbose
+     * @param _src
+     * @param _savedOutputMaps
+     * @return
+     * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+     * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+     * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+     */
+    public static Object getDataFromReference( final boolean _verbose, final String _src,
+                                LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+                throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
+    {
+        final Tools tools = new Tools(_verbose);
+        if ( _src != null ) {
+            if ( _src.startsWith("@") ) {
+                final String srcFile = _src.substring(1);
+                final InputStream fs = new FileInputStream( srcFile );
+                if ( srcFile.endsWith(".json") ) {
+                    //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+                    // final LinkedHashMap<String, Object> retMap2 = ..
+                    // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+                    //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+                    com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
+                    LinkedHashMap<String, Object> retMap2 = null;
+                    retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
+                    if ( _verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
+                    retMap2 = tools.JSON2YAML( retMap2 );
+                    fs.close();
+                    return retMap2;
+                }
+                if ( srcFile.endsWith(".yaml") ) {
+                    final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
+                    final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
+                    @SuppressWarnings("unchecked")
+                    final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
+                    reader1.close(); // automatically includes fs.close();
+                    if ( _verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
+                    return retMap3;
+                }
+                return null; // compiler is complaining about missing return statement.
+            } else if ( _src.startsWith("!") ) {
+                final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
+                // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+                final Object newContent /* LinkedHashMap<String, Object> */ = _savedOutputMaps.get( savedMapName );
+                if (_verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): newContent=" + newContent.toString() );
+                return newContent;
+            } else {
+                return _src; // The user provided a java.lang.String directly - to be used AS-IS
+            }
+        } else {
+            return null;
+        }
+    }
+
+    //======================================================================
+
+    /**
+     * 
+     * @param _verbose
+     * @param _dest
+     * @param _inputMap
+     * @param _savedOutputMaps
+     * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+     * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+     * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+     */
+    public static void saveDataIntoReference( final boolean _verbose, final String _dest,
+                                final LinkedHashMap<String, Object> _inputMap,
+                                final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+                throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
+    {
+        final Tools tools = new Tools(_verbose);
+        if ( _dest != null ) {
+            if ( _dest.startsWith("@") ) {
+                final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
+                final InputStream fs = new FileInputStream( destFile );
+                if ( destFile.endsWith(".json") ) {
+                    //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+                    // final LinkedHashMap<String, Object> retMap2 = ..
+                    // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+                    //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+                    final com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
+                    objMapper.writeValue( filewr, _inputMap );
+                    filewr.close();
+                    fs.close();
+                    if ( _verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.YAML2JSONString(_inputMap) );
+                    return;
+                } else if ( destFile.endsWith(".yaml") ) {
+                    final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
+                            = new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter( destFile ) );
+                    yamlwriter.write( _inputMap );
+                    yamlwriter.close();
+                    fs.close();
+                    if ( _verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.YAML2JSONString(_inputMap) );
+                    return;
+                }
+                return;
+            } else {
+                // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
+                final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
+                if ( _savedOutputMaps != null ) {
+                    // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+                    _savedOutputMaps.put( saveToMapName, _inputMap );  // remove '!' as the 1st character in the destination-reference provided
+                    if (_verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'savedOutputMaps'=" + tools.YAML2JSONString(_inputMap) );
+                }
+            }
+        } else {
+            return; // do Nothing.
+        }
     }
 
 }
