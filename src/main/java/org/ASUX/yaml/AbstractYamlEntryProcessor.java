@@ -64,6 +64,8 @@ public abstract class AbstractYamlEntryProcessor {
      */
     public final boolean showStats;
 
+    private YAMLPath yp = null;
+
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      */
@@ -92,7 +94,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
      */
-    protected abstract boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
     //-------------------------------------
     /** <p>This function will be called when a full/end2end match of a YAML path-expression happens.</p>
@@ -110,7 +112,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
      */
-    protected abstract boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
     //-------------------------------------
     /** <p>This function will be called whenever the YAML path-expression fails to match.</p>
@@ -125,7 +127,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      */
-    protected abstract void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths);
+    protected abstract void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
     //-------------------------------------
     /** <p>This function will be called when processing has ended.</p>
@@ -136,7 +138,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      */
-    protected abstract void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath);
+    protected abstract void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) throws Exception;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -146,15 +148,17 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _yamlPathStr Example: "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _delim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      *  @return true = whether at least one match happened.
+     *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
      *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+     *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean searchYamlForPattern(LinkedHashMap<String, Object> _map, String _yamlPathStr, final String _delim)
-                throws com.esotericsoftware.yamlbeans.YamlException
+                throws YAMLPath.YAMLPathException, com.esotericsoftware.yamlbeans.YamlException, Exception
     {
         final LinkedList<String> end2EndPaths = new LinkedList<>();
-        final YAMLPath yp = new YAMLPath( _yamlPathStr, _delim );
-        final boolean retval = this.recursiveSearch( _map, yp, end2EndPaths );
-        atEndOfInput( _map, yp );
+        this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
+        final boolean retval = this.recursiveSearch( _map, this.yp, end2EndPaths );
+        atEndOfInput( _map, this.yp );
         // What should be done if atEndOfInput returns false.. ?
         return retval;
     }
@@ -186,9 +190,10 @@ public abstract class AbstractYamlEntryProcessor {
      *  @return true = whether at least one match happened.
      *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
      *  @throws java.util.regex.PatternSyntaxException - this is thrown the innocuous String.match(regexp)
+     *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean recursiveSearch(LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final LinkedList<String> _end2EndPaths )
-                    throws com.esotericsoftware.yamlbeans.YamlException, java.util.regex.PatternSyntaxException 
+                    throws com.esotericsoftware.yamlbeans.YamlException, java.util.regex.PatternSyntaxException, Exception
     {
         if ( (_map==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
         if (  ! _yamlPath.isValid ) return false;
