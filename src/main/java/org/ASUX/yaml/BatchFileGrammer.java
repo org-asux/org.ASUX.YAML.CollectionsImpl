@@ -56,10 +56,10 @@ public class BatchFileGrammer implements java.io.Serializable {
     public static final String GLOBALVARIABLES = "GLOBAL.VARIABLES";
     public static final String SYSTEM_ENV = "System.env";
 
-	private static String REGEXP_NAMESUFFIX = "[${}@%a-zA-Z0-9\\.,:_/-]+";
-	private static String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
-	private static String REGEXP_FILENAME = "[a-zA-Z./]" + REGEXP_NAMESUFFIX;
-	private static String REGEXP_OBJECT_REFERENCE = "[@!]?" + REGEXP_FILENAME;
+	public static final String REGEXP_NAMESUFFIX = "[${}@%a-zA-Z0-9\\.,:_/-]+";
+	public static final String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
+	public static final String REGEXP_FILENAME = "[a-zA-Z./]" + REGEXP_NAMESUFFIX;
+	public static final String REGEXP_OBJECT_REFERENCE = "[@!]?" + REGEXP_FILENAME;
 
     //--------------------------------------------------------
     private final boolean verbose;
@@ -67,11 +67,11 @@ public class BatchFileGrammer implements java.io.Serializable {
     private String fileName = null;
     private ArrayList<String> lines = new ArrayList<>();
     private transient Iterator<String> iterator = null;  // <<- transient class variable.  Will not be part of deepClone() method.
-
     private int currentLineNum = -1;
-    private String currentLine = null;
 
-    enum BatchCmdType { Cmd_Properties, Cmd_SetProperty, Cmd_Print, Cmd_SaveTo, Cmd_UseAsInput, Cmd_MakeNewRoot, Cmd_Foreach, Cmd_End, Cmd_Batch, Cmd_Sleep, Cmd_Any };
+    private boolean bLine2bEchoed = false;
+
+    enum BatchCmdType { Cmd_MakeNewRoot, Cmd_Batch, Cmd_Foreach, Cmd_End, Cmd_Properties, Cmd_SetProperty, Cmd_Print, Cmd_SaveTo, Cmd_UseAsInput, Cmd_Sleep, Cmd_Any };
     private BatchCmdType whichCmd = BatchCmdType.Cmd_Any;
 
     private Tools.Tuple<String,String> propertiesKV = null;
@@ -102,10 +102,10 @@ public class BatchFileGrammer implements java.io.Serializable {
      * @return something like: Batchfile [@mapsBatch1.txt] @ lime# 2 = [useAsInput @filename]
      */
     public String getState() {
-        if ( this.fileName == null || this.currentLine == null || this.currentLineNum <= 0 )
+        if ( this.fileName == null || this.currentLineNum <= 0 )
             return "Batchfile ["+ this.fileName +"] is in invalid state";
         else
-            return "Batchfile: ["+ this.fileName +"] @ line# "+ this.currentLineNum +" = ["+ this.currentLine +"]";
+            return "Batchfile: ["+ this.fileName +"] @ line# "+ this.currentLineNum +" = ["+ this.currentLine() +"]";
     }
 
     /** This class aims to mimic java.util.Scanner's hasNextLine() and nextLine() and reset().<br>reset() has draconian-implications - as if openBatchFile() was never called!
@@ -114,7 +114,6 @@ public class BatchFileGrammer implements java.io.Serializable {
         this.fileName = null;
         this.lines = new ArrayList<>();
 
-        this.currentLine = null;
         this.currentLineNum = -1;
         this.iterator = null;
         this.resetFlagsForEachLine();
@@ -124,6 +123,7 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     private void resetFlagsForEachLine() {
         this.whichCmd = BatchCmdType.Cmd_Any;
+        this.bLine2bEchoed = false;
 
         this.propertiesKV = null;
         this.printExpr = null;
@@ -139,7 +139,6 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public void rewind() {
         this.currentLineNum = 0; // Both -1 and 0 are invalid values.  1st line # is always === '1'.  That way it helps the user to debug batch-file issues.
-        this.currentLine = null; // ... why on earth is code expecting a valid value for currentLine without invoking next()?
         this.iterator = this.lines.iterator();
 
         this.resetFlagsForEachLine();
@@ -151,13 +150,11 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public String currentLine() {
 
-        if ( this.currentLine == null ) {
-            if (   !   hasNextLine() )
-                return null;
-            else
-                return this.nextLine(); // this will Not be null.. just because of the call to hasNextLine() above.
+        if ( this.currentLineNum > 0 && this.currentLineNum <= this.lines.size() ) {
+            // return this.nextLine(); // this will Not be null.. just because of the call to hasNextLine() above.
+            return this.lines.get ( this.currentLineNum - 1 );
         } else {
-            return this.currentLine;
+            return null;
         }
     }
 
@@ -177,8 +174,19 @@ public class BatchFileGrammer implements java.io.Serializable {
         return this.fileName;
     }
 
+    /**
+     * Statistics about the batch file being processed.  Currently only # of Non-Comment & Non-empty lines are counted.
+     * @return a number >=0 (if no errors parsing / loading batch-file).. or -1 if any trouble with Batchfile.
+     */
     public int getCommandCount()  {
         return (this.lines != null) ? this.lines.size(): -1;
+    }
+
+    /** For use by any Processor of this batch-file.. whether the user added the 'echo' prefix to a command, requesting that that specific line/command be echoed while executing
+     * @return true or false, whether the user added the 'echo' prefix to a command, requesting that that specific line/command be echoed while executing
+    */
+    public boolean isLine2bEchoed() {
+        return this.bLine2bEchoed;
     }
 
     //===========================================================================
@@ -201,18 +209,17 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public String nextLine() {
         if ( this.hasNextLine() ) {
-            this.currentLine = this.iterator.next();
+            this.iterator.next();
             this.currentLineNum ++;
+            resetFlagsForEachLine(); // so that the isXXX() methods invoked of this class -- now that we're on NEW/NEXT line -- will NOT take a shortcut!
+            this.determineCmdType();
+            if ( this.verbose ) System.out.println( CLASSNAME +": nextLine(): "+ this.whichCmd.toString() +"\t @ currentLineNum " + this.currentLineNum +" = "+ this.currentLine() );
+            return this.lines.get ( this.currentLineNum - 1 );
         } else {
-            this.currentLine = null; // dont create chaos in code in other CLASSES that invokes on hasNextLine() and nextLine()
             this.currentLineNum = -1;
             // WARNING: Do not invoke this.rewind() or this.reset().  It will INCORRECTLY change the value of this.iterator
+            return null;
         }
-        resetFlagsForEachLine(); // so that the isXXX() methods invoked of this class -- now that we're on NEW/NEXT line -- will NOT take a shortcut!
-        this.determineCmdType();
-        if ( this.verbose ) System.out.println( CLASSNAME +": nextLine(): "+ this.whichCmd.toString() +"\t @ currentLineNum " + this.currentLineNum +" = "+ this.currentLine );
-
-        return this.currentLine;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -328,13 +335,26 @@ public class BatchFileGrammer implements java.io.Serializable {
     public void determineCmdType() {
 
         this.resetFlagsForEachLine();
-        final String line = this.currentLine(); // remember the line is most likely already trimmed
+        String line = this.currentLine(); // remember the line is most likely already trimmed.  We need to chop off any 'echo' prefix
         if ( line == null )
             return;
 
         if ( this.verbose ) System.out.println( CLASSNAME +": determineCmdType(): Line#=[" + this.currentLineNum +"] =[" + line +"] " );
 
         try {
+            // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // This block of code below (echoPattern, echoMatcher, this.bLine2bEchoed) MUST be the very BEGINNNG of this function
+            Pattern echoPattern = Pattern.compile( "^\\s*echo\\s+(\\S.*\\S)\\s*$" );
+            Matcher echoMatcher    = echoPattern.matcher( line );
+            if (echoMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the command to be ECHO-ed '"+ echoMatcher.group(1) +"' starting at index "+  echoMatcher.start() +" and ending at index "+ echoMatcher.end() );    
+                line = echoMatcher.group(1); // line.substring( echoMatcher.start(), echoMatcher.end() );
+                this.bLine2bEchoed = true;
+                this.lines.set( this.currentLineNum - 1, line ); // get rid of the 'echo' prefix .. 
+                if ( this.verbose ) System.out.println( "\t 2nd echoing Line # " + this.currentLineNum +" =[" + this.lines.get( this.currentLineNum - 1 ) +"]" );
+                // fall thru below.. to identify the commands
+            }
+
             Pattern makeNewRootPattern = Pattern.compile( "^\\s*makeNewRoot\\s+("+ REGEXP_NAME +")\\s*$" );
             Matcher makeNewRootMatcher    = makeNewRootPattern.matcher( line );
             if (makeNewRootMatcher.find()) {
@@ -444,7 +464,7 @@ public class BatchFileGrammer implements java.io.Serializable {
      */
     public Tools.Tuple<String,String> getPropertyKV() {
         if ( this.whichCmd == BatchCmdType.Cmd_Properties || this.whichCmd == BatchCmdType.Cmd_SetProperty )
-            return this.propertiesKV; // we've already executed the code below - SPECIFICALLY for the currentLine!
+            return this.propertiesKV; // we've already executed the code below - SPECIFICALLY for the current Line!
         else
             return null;
     }
@@ -610,14 +630,20 @@ public class BatchFileGrammer implements java.io.Serializable {
             o.openFile( args[0], true );
             while (o.hasNextLine()) {
                 System.out.println(o.nextLine());
+                o.getState();
 
-                // o.isPropertyLine();
-                // // final Tuple kv = o.isPropertyLine(); // could be null, implying NOT a kvpair
+                o.isLine2bEchoed();
+                o.getPropertyKV();
+                o.getPrintExpr();
+                // final Tuple kv = o.isPropertyLine(); // could be null, implying NOT a kvpair
 
-                // o.isForEachLine();
-                // o.isEndLine();
-                // o.isSaveToLine();
-                // o.isUseAsInputLine();
+                o.isForEachLine();
+                o.isEndLine();
+                o.getSaveTo();
+                o.getUseAsInput();
+                o.getMakeNewRoot();
+                o.getSubBatchFile();
+                o.getSleepDuration();
                 final boolean bForEach = o.isForEachLine();
                 if ( bForEach ) System.out.println("\t Loop begins=[" + bForEach + "]");
                 final boolean bEndLine = o.isEndLine();
