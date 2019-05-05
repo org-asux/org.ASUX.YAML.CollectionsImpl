@@ -181,12 +181,14 @@ public class Cmd {
             if ( cmdLineArgs.isReadCmd ) {
                 @SuppressWarnings("unchecked")
                 final LinkedList<Object> list = ( LinkedList<Object> ) output;
-                // list.forEach( s -> System.out.println( s.toString() ) );
+                writer.write( list );
+            } else if ( cmdLineArgs.isTableCmd ) {
+                @SuppressWarnings("unchecked")
+                final LinkedList< ArrayList<String> > list = ( LinkedList< ArrayList<String> > ) output;
                 writer.write( list );
             } else if ( cmdLineArgs.isListCmd ) {
                 @SuppressWarnings("unchecked")
                 final ArrayList<String> arr = ( ArrayList<String> ) output;
-                // arr.forEach( s -> System.out.println( s ) );
                 writer.write( arr );
             } else if ( cmdLineArgs.isDelCmd ) {
             } else if ( cmdLineArgs.isInsertCmd )   { // see common code in next block-of-code below
@@ -240,6 +242,10 @@ public class Cmd {
             e.printStackTrace(System.err);
             System.err.println( "Internal error: unable to process YAML");
             System.exit(9);
+        } catch (YAMLPath.YAMLPathException e) {
+            e.printStackTrace(System.err);
+            System.err.println( "YAML-Path pattern is invalid: '" + cmdLineArgs.yamlRegExpStr + "'.");
+            System.exit(8);
         } catch (java.io.FileNotFoundException e) {
             e.printStackTrace(System.err);
             System.err.println( "INPUT-File Not found: '" + cmdLineArgs.inputFilePath + "'.");
@@ -260,17 +266,19 @@ public class Cmd {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
     /**
-     * This function is meant to be used by Cmd.main() and by BatchProcessor.java.  Read the code *FIRST*, to see if you can use this function too.
-     * @param _cmdLineArgs yes, everything passed as commandline arguments to this Java program / org.ASUX.yaml.Cmd
-     * @param _data _the YAML data that is the input to pretty much all commands (a java.utils.LinkedHashMap&lt;String, Object&gt; object).
-     * @return either a String, java.utils.LinkedHashMap&lt;String, Object&gt;
-     * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
-     * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
-     * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
-     * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+     *  This function is meant to be used by Cmd.main() and by BatchProcessor.java.  Read the code *FIRST*, to see if you can use this function too.
+     *  @param _cmdLineArgs yes, everything passed as commandline arguments to this Java program / org.ASUX.yaml.Cmd
+     *  @param _data _the YAML data that is the input to pretty much all commands (a java.utils.LinkedHashMap&lt;String, Object&gt; object).
+     *  @return either a String, java.utils.LinkedHashMap&lt;String, Object&gt;
+     *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
+     *  @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     *  @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+     *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+     *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public Object processCommand ( CmdLineArgs _cmdLineArgs, final LinkedHashMap<String, Object> _data)
-                throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
+                throws FileNotFoundException, IOException, Exception,
+                YAMLPath.YAMLPathException, com.esotericsoftware.yamlbeans.YamlException
     {
         if ( _cmdLineArgs.isReadCmd ) {
             ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
@@ -284,11 +292,17 @@ public class Cmd {
             final ArrayList<String> outputStr = listcmd.getOutput();
             return outputStr;
 
+        } else if ( _cmdLineArgs.isTableCmd ) {
+            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isTableCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & tableColumns=[" + _cmdLineArgs.tableColumns +"]" );
+            TableYamlEntry tblcmd = new TableYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, _cmdLineArgs.tableColumns, _cmdLineArgs.yamlPatternDelimiter );
+            tblcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+            final LinkedList< ArrayList<String> > output = tblcmd.getOutput();
+            return output;
+
         } else if ( _cmdLineArgs.isDelCmd) {
             if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
             DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             delcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
-            // writer.write( _data ); // The contents of java.util.LinkedHashMap<String, Object> has some YAML rows removed. so, dump it.
             return _data;
 
         } else if ( _cmdLineArgs.isInsertCmd ) {
@@ -297,7 +311,6 @@ public class Cmd {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
             InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent );
             inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
-            // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with new/insert strings. so, dump it.
             return _data;
 
         } else if ( _cmdLineArgs.isReplaceCmd ) {
@@ -306,7 +319,6 @@ public class Cmd {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
             ReplaceYamlEntry replcmd = new ReplaceYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent );
             replcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
-            // writer.write(_data); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return _data;
 
         } else if ( _cmdLineArgs.isMacroCmd ) {
