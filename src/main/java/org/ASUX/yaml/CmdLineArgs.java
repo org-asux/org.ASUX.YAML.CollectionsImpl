@@ -53,6 +53,7 @@ public class CmdLineArgs {
 
     private static final String READCMD = "read";
     private static final String LISTCMD = "list";
+    private static final String TABLECMD = "table";
     private static final String DELETECMD = "delete";
     private static final String INSERTCMD = "insert";
     private static final String REPLACECMD = "replace";
@@ -71,6 +72,7 @@ public class CmdLineArgs {
 
     public boolean isReadCmd = true;
     public boolean isListCmd = false;
+    public boolean isTableCmd = false;
     public boolean isDelCmd = false;
     public boolean isInsertCmd = false;
     public boolean isReplaceCmd = false;
@@ -79,6 +81,7 @@ public class CmdLineArgs {
 
     public String inputFilePath = "/tmp/i";
     public String outputFilePath = "/tmp/o";
+    public String tableColumns = "INVALID-TableQuery";
     public String insertFilePath = null;       // optional argument, but required for 'insert' command
     public String replaceFilePath = null;       // optional argument, but required for 'replace' command
     public String propertiesFilePath = null;    // optional argument, but required for 'macro' command
@@ -114,6 +117,10 @@ public class CmdLineArgs {
             listCmdOpt.setOptionalArg(false);
             listCmdOpt.setArgs(1);
             listCmdOpt.setArgName("YAMLPattern");
+        Option tableCmdOpt = new Option("t", TABLECMD, false, "produce a tabular output like a traditional SQL-query would");
+            tableCmdOpt.setOptionalArg(false);
+            tableCmdOpt.setArgs(2);
+            tableCmdOpt.setArgName("YAMLPattern> <column,column");
         Option delCmdOpt = new Option("d", DELETECMD, true, "Delete all elements that match");
             delCmdOpt.setOptionalArg(false);
             delCmdOpt.setArgs(1);
@@ -138,6 +145,7 @@ public class CmdLineArgs {
             macroCmdOpt.setArgName("batchFile");
         grp.addOption(readCmdOpt);
         grp.addOption(listCmdOpt);
+        grp.addOption(tableCmdOpt);
         grp.addOption(delCmdOpt);
         grp.addOption(insCmdOpt);
         grp.addOption(replCmdOpt);
@@ -195,6 +203,7 @@ public class CmdLineArgs {
 
             this.isReadCmd = cmd.hasOption(READCMD);
             this.isListCmd = cmd.hasOption(LISTCMD);
+            this.isTableCmd = cmd.hasOption(TABLECMD);
             this.isDelCmd = cmd.hasOption(DELETECMD);
             this.isInsertCmd = cmd.hasOption(INSERTCMD);
             this.isReplaceCmd = cmd.hasOption(REPLACECMD);
@@ -209,10 +218,17 @@ public class CmdLineArgs {
             if (this.isReadCmd) this.yamlRegExpStr = cmd.getOptionValue(READCMD);
             if (this.isListCmd) this.yamlRegExpStr = cmd.getOptionValue(LISTCMD);
             if (this.isDelCmd) this.yamlRegExpStr = cmd.getOptionValue(DELETECMD);
+
+            final String[] tableArgs = cmd.getOptionValues(TABLECMD);
+            // because we set .setArgs(2) above.. you can get the values for:- replaceArgs[0] and replaceArgs[1].
+            if (this.isTableCmd) this.yamlRegExpStr = tableArgs[0]; // 1st of the 2 arguments for TABLE-QUERY cmd.
+            if (this.isTableCmd) this.tableColumns = tableArgs[1];
+
             final String[] insertArgs = cmd.getOptionValues(INSERTCMD);
             // because we set .setArgs(2) above.. you can get the values for:- insertArgs[0] and insertArgs[1].
             if (this.isInsertCmd) this.yamlRegExpStr = insertArgs[0]; // 1st of the 2 arguments for INSERT cmd.
             if (this.isInsertCmd) this.insertFilePath = insertArgs[1];
+
             final String[] replaceArgs = cmd.getOptionValues(REPLACECMD);
             // because we set .setArgs(2) above.. you can get the values for:- replaceArgs[0] and replaceArgs[1].
             if (this.isReplaceCmd) this.yamlRegExpStr = replaceArgs[0]; // 1st of the 2 arguments for REPLACE cmd.
@@ -241,9 +257,10 @@ public class CmdLineArgs {
      */
     public String toString() {
         return "verbose="+verbose+" showStats="+showStats+" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
-        +" read="+isReadCmd+" list="+isListCmd+"  delete="+isDelCmd+" insert="+isInsertCmd+" change="+isReplaceCmd
+        +" read="+isReadCmd+" list="+isListCmd+" tableColumns="+isTableCmd+" delete="+isDelCmd+" insert="+isInsertCmd+" change="+isReplaceCmd
         +" macro="+isMacroCmd+" batch="+isBatchCmd
-        +" inpfile="+inputFilePath+" outputfile="+outputFilePath+" insertFile="+insertFilePath+" replaceFile="+replaceFilePath
+        +" inpfile="+inputFilePath+" outputfile="+outputFilePath
+        +" insertFile="+insertFilePath+" replaceFile="+replaceFilePath+" tableColumns="+tableColumns
         +" batchFilePath="+batchFilePath+" propertiesFilePath="+propertiesFilePath
         ;
         // yamlRegExpStr="+yamlRegExpStr+" 
