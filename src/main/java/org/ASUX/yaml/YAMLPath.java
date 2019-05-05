@@ -80,6 +80,12 @@ public class YAMLPath implements Serializable {
 
 	public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
 
+    //------------------------------------------------------------------------------
+    /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
+     *  <p>It's read-only (final data-attribute).</p>
+     */
+    public final boolean verbose;
+
     public boolean isValid = false;
     public final String yamlPath;
     public final String delimiter;
@@ -88,11 +94,10 @@ public class YAMLPath implements Serializable {
 
     protected int indexPtr = -1;
 
-    /**
-     * Ths function will ensure this object behaves as if.. you are going to call hasNext() and next() for the 1st time (on this specific instance/object).
-     */
-    public void rewind() {
-        this.indexPtr = 0;
+    //------------------------------------------------------------------------------
+    public static class YAMLPathException extends Exception {
+        private static final long serialVersionUID = 10L;
+        public YAMLPathException(String _s) { super(_s); }
     }
 
     //=======================================================================
@@ -104,8 +109,8 @@ public class YAMLPath implements Serializable {
      *  <p>Special case: <code>"**"</code> represents a deviation of java.util.regexp specs on what qualifies as a regular-expression.  This deviation is a very human-friendly easy-2-understand need.</p>
      *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "." - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      */
-    public YAMLPath(String _yp) {
-        this(_yp, DEFAULTDELIMITER);
+    public YAMLPath( final boolean _verbose, String _yp ) throws YAMLPathException {
+        this( _verbose, _yp, DEFAULTDELIMITER );
     }
 
     //=======================================================================
@@ -116,10 +121,15 @@ public class YAMLPath implements Serializable {
      *  <p>It breaks it up into regexpressions separated by DELIMITER</p>
      *  @param _yp example: "<code>paths.*.*.responses.200</code>" - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _delim examples are "." or "\t"  or "," .. ..
+     *  @throws YAMLPathException if Pattern provided for YAML-Path is either semantically empty or is NOT java.util.Pattern compatible.
      */
-    public YAMLPath(String _yp, final String _delim) {
-        this.yamlPath = _yp; //save it
+    public YAMLPath( final boolean _verbose, String _yp, final String _delim ) throws YAMLPathException {
+        this.verbose = _verbose;
+        _yp = _yp.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
+        if ( _yp.length() <= 0 )
+            throw new YAMLPathException( CLASSNAME +" Constructor: semantically EMPTY Pattern (java.util.Pattern compatible) provided ["+ _yp +"]" ); // invalid YAML Path.  Let "this.isValid" stay as false
         this.delimiter = _delim;
+        this.yamlPath = _yp; //save it
         this.prntDelimiter = DEFAULTPRINTDELIMITER; // _delim.replaceAll("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
         // System.out.println( "x\\.y".replaceAll​("\\\\", "") );
 
@@ -127,26 +137,24 @@ public class YAMLPath implements Serializable {
         try {
             Pattern p = Pattern.compile(_delim);
         }catch(PatternSyntaxException e){
-            System.err.println("Invalid delimiter-pattern '"+ _delim +"' provided to constructor of "+CLASSNAME);
             e.printStackTrace(System.err);
+            System.err.println( CLASSNAME +": Constructor: Invalid delimiter-pattern '"+ _delim +"' provided to constructor of "+CLASSNAME);
             return; // invalid YAML Path.  Let "this.isValid" stay as false
         }
 
-        // System.out.println(CLASSNAME + ": Sanity check completed for yp=["+ _yp +"]" );
+        if (this.verbose) System.out.println(CLASSNAME + ": Sanity check completed for yp=["+ _yp +"]" );
         //        boolean b = Pattern.matches("a*b", "aaaaab");
-        _yp.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
-        if ( _yp.length() <= 0 ) return; // invalid YAML Path.  Let "this.isValid" stay as false
 
-        // System.out.println(CLASSNAME + ": about to split '"+_yp+"' with delimiter '"+_delim+"'");
+        if (this.verbose) System.out.println(CLASSNAME + ": about to split '"+_yp+"' with delimiter '"+_delim+"'");
         this.yamlElemArr = _yp.split(_delim);
-        // for (String str: yamlElemArr) {}
-        // System.out.println(CLASSNAME + ": this.yamlElemArr has length '"+this.yamlElemArr.length+"'");
-        // System.out.println(CLASSNAME + ": this.yamlElemArr[0] = '"+this.yamlElemArr[0]+"'");
+
+        if (this.verbose) System.out.println(CLASSNAME + ": this.yamlElemArr has length '"+this.yamlElemArr.length+"'");
+        if (this.verbose) System.out.println(CLASSNAME + ": this.yamlElemArr[0] = '"+this.yamlElemArr[0]+"'");
 
         for(int ix=0; ix < this.yamlElemArr.length; ix++ ) {
             String elem = this.yamlElemArr[ix];
             try {
-                // System.out.println(CLASSNAME+": checking on .. YAML-element '"+ elem +"'.");
+                if (this.verbose) System.out.println(CLASSNAME+": checking on .. YAML-element '"+ elem +"'.");
                 if (elem.equals("**") ) {
                     // nothing to validate, as its NOT a valid Regular-expression.  Let "**" through!
                 }else {
@@ -154,15 +162,14 @@ public class YAMLPath implements Serializable {
                         elem = MATCHANYSINGLEPATHELEMENT; // convert human-friendly * into formal-regexp .*
                         this.yamlElemArr[ix] = elem;
                     }
-                    // System.out.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
+                    if (this.verbose) System.out.println(CLASSNAME+": YAML-element='"+ this.yamlElemArr[ix] +"'.");
                     final Pattern p = Pattern.compile(elem); // not using this, but if 'elem' is invalid, exception thrown
                 }
             }catch(PatternSyntaxException e){
-                System.err.println(CLASSNAME+": Invalid YAML-element '"+ elem +"' provided.");
                 e.printStackTrace(System.err);
-                return; // invalid YAML Path.  Let "this.isValid" stay as false
+                throw new YAMLPathException( CLASSNAME+": Constructor: Invalid YAML-element '"+ elem +"' provided." );
             }
-        }
+        } // for
 
         this.isValid = (this.yamlElemArr.length > 0) ? true : false;
         this.indexPtr = (this.yamlElemArr.length > 0) ? 0 : -1;
@@ -171,6 +178,13 @@ public class YAMLPath implements Serializable {
     //=======================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=======================================================================
+
+    /**
+     * Ths function will ensure this object behaves as if.. you are going to call hasNext() and next() for the 1st time (on this specific instance/object).
+     */
+    public void rewind() {
+        this.indexPtr = 0;
+    }
 
     /** Whether the instance of this class is valid (in case you are passed this object by some other code, this is your sanity check).. .. before you invoke any of the other functions in ths class and end up with runtime errors
      *  @return true means all the methods in this class are GUARANTEED to NOT Throw any runtime exception :-)
