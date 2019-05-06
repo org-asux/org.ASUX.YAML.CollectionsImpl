@@ -204,35 +204,21 @@ public class BatchYamlProcessor {
 
             _batchCmds.nextLine(); // we can always get the return value of this statement .. via _batchCmds.getCurrentLine()
             if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"): START of while-loop for "+ _batchCmds.getState() +" .. for input="+ tools.JSON2String(inputMap) +"]" );
+            if ( _batchCmds.isLine2bEchoed() ) System.out.println( "Echo (As-Is): "+ _batchCmds.currentLine() );
 
             switch( _batchCmds.getCmdType() ) {
-                case Cmd_Properties:
-                    tempOutputMap = this.onPropertyLineCmd( _batchCmds, inputMap, tempOutputMap );
-                    this.runcount ++;
-                    break;
-                case Cmd_SetProperty:
-                    final String key = MacroYamlProcessor.evaluateMacros( _batchCmds.getPropertyKV().key, this.AllProps );
-                    final String val = MacroYamlProcessor.evaluateMacros( _batchCmds.getPropertyKV().val, this.AllProps );
-                    globalVariables.setProperty( key, val );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion(): Cmd_SetProperty key=["+ key +"] & val=["+ val +"].");
-                    break;
-                case Cmd_Print:
-                    tempOutputMap = this.onPrintCmd( _batchCmds, inputMap, tempOutputMap );
-                    this.runcount ++;
-                    break;
-                case Cmd_SaveTo:
-                    // Might sound crazy - at first.  inpMap for this 'saveAs' command is the output of prior command.
-                    // final String saveTo_AsIs = _batchCmds.getSaveTo();
-                    processSaveToLine( _batchCmds, inputMap );
-                    tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
-                    this.runcount ++;
-                    break;
-                case Cmd_UseAsInput:
-                    tempOutputMap = processUseAsInputLine( _batchCmds );
-                    this.runcount ++;
-                    break;
                 case Cmd_MakeNewRoot:
                     tempOutputMap.put( _batchCmds.getMakeNewRoot(), "" ); // Very simple YAML:-    NewRoot: <blank>
+                    this.runcount ++;
+                    break;
+                case Cmd_Batch:
+                    final String bSubBatch = MacroYamlProcessor.evaluateMacros( _batchCmds.getSubBatchFile(), this.AllProps );
+                    this.go( bSubBatch, inputMap, tempOutputMap );
+                    // technically, this.go() method is NOT meant to used recursively.  Semantically, this is NOT recursion :-(
+                    this.runcount ++;
+                    break;
+                case Cmd_Properties:
+                    tempOutputMap = this.onPropertyLineCmd( _batchCmds, inputMap, tempOutputMap );
                     this.runcount ++;
                     break;
                 case Cmd_Foreach:
@@ -251,10 +237,25 @@ public class BatchYamlProcessor {
                     return inputMap;
                     // !!!!!!!!!!!! ATTENTION : Function exits here SUCCESSFULLY / NORMALLY. !!!!!!!!!!!!!!!!
                     // break;
-                case Cmd_Batch:
-                    final String bSubBatch = MacroYamlProcessor.evaluateMacros( _batchCmds.getSubBatchFile(), this.AllProps );
-                    this.go( bSubBatch, inputMap, tempOutputMap );
-                    // technically, this.go() method is NOT meant to used recursively.  Semantically, this is NOT recursion :-(
+                case Cmd_SaveTo:
+                    // Might sound crazy - at first.  inpMap for this 'saveAs' command is the output of prior command.
+                    // final String saveTo_AsIs = _batchCmds.getSaveTo();
+                    processSaveToLine( _batchCmds, inputMap );
+                    tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
+                    this.runcount ++;
+                    break;
+                case Cmd_UseAsInput:
+                    tempOutputMap = processUseAsInputLine( _batchCmds );
+                    this.runcount ++;
+                    break;
+                case Cmd_SetProperty:
+                    final String key = MacroYamlProcessor.evaluateMacros( _batchCmds.getPropertyKV().key, this.AllProps );
+                    final String val = MacroYamlProcessor.evaluateMacros( _batchCmds.getPropertyKV().val, this.AllProps );
+                    globalVariables.setProperty( key, val );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion(): Cmd_SetProperty key=["+ key +"] & val=["+ val +"].");
+                    break;
+                case Cmd_Print:
+                    tempOutputMap = this.onPrintCmd( _batchCmds, inputMap, tempOutputMap );
                     this.runcount ++;
                     break;
                 case Cmd_Sleep:
@@ -272,6 +273,7 @@ public class BatchYamlProcessor {
             // this line below must be the very last line in the loop
             inputMap = tempOutputMap; // because we might be doing ANOTHER iteraton of the While() loop.
 
+            if ( _batchCmds.isLine2bEchoed() ) System.out.println( "Echo (Macro-substituted): "+  MacroYamlProcessor.evaluateMacros( _batchCmds.currentLine(), this.AllProps ) );
             if ( this.verbose ) System.out.println( " _________________________ processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"):  BOTTOM of WHILE-loop: tempOutputMap =" + tools.JSON2String(tempOutputMap) +"");
         } // while loop
 
