@@ -175,8 +175,8 @@ public class BatchFileGrammer implements java.io.Serializable {
     }
 
     /**
-     * Statistics about the batch file being processed.  Currently only # of Non-Comment & Non-empty lines are counted.
-     * @return a number >=0 (if no errors parsing / loading batch-file).. or -1 if any trouble with Batchfile.
+     * Statistics about the batch file being processed.  Currently only # of Non-Comment and Non-empty lines are counted.
+     * @return a number &gt;=0 (if no errors parsing / loading batch-file).. or -1 if any trouble with Batchfile.
      */
     public int getCommandCount()  {
         return (this.lines != null) ? this.lines.size(): -1;
