@@ -55,6 +55,7 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
+     *  @param _showStats Whether you want a final summary onto console / System.out
      *  @param _printDelim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      */
     public ListYamlEntry( final boolean _verbose, final boolean _showStats, final String _printDelim ) {
