@@ -95,6 +95,10 @@ public class YAMLPath implements Serializable {
     protected int indexPtr = -1;
 
     //------------------------------------------------------------------------------
+    /**
+     * This Exception type is thrown exclusively by YAMLPath.java class.
+     * That way, you can report better errors to the end-user
+     */
     public static class YAMLPathException extends Exception {
         private static final long serialVersionUID = 10L;
         public YAMLPathException(String _s) { super(_s); }
@@ -107,7 +111,9 @@ public class YAMLPath implements Serializable {
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by the default DELIMITER = "."</p>
      *  <p>Special case: <code>"**"</code> represents a deviation of java.util.regexp specs on what qualifies as a regular-expression.  This deviation is a very human-friendly easy-2-understand need.</p>
+     *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _yp example: "<code>paths.*.*.responses.200</code>"  where the delimiter is fixed to be the period/dot "." - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
+     *  @throws org.ASUX.yaml.YAMLPath.YAMLPathException if Pattern provided for YAML-Path is either semantically empty or is NOT java.util.Pattern compatible.. .. or, invalid delimiter, etc..
      */
     public YAMLPath( final boolean _verbose, String _yp ) throws YAMLPathException {
         this( _verbose, _yp, DEFAULTDELIMITER );
@@ -119,9 +125,10 @@ public class YAMLPath implements Serializable {
 
     /** <p>Constructor takes a YAML Path like <code>paths./pet.put.consumes</code></p>
      *  <p>It breaks it up into regexpressions separated by DELIMITER</p>
+     *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _yp example: "<code>paths.*.*.responses.200</code>" - - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _delim examples are "." or "\t"  or "," .. ..
-     *  @throws YAMLPathException if Pattern provided for YAML-Path is either semantically empty or is NOT java.util.Pattern compatible.
+     *  @throws org.ASUX.yaml.YAMLPath.YAMLPathException if Pattern provided for YAML-Path is either semantically empty or is NOT java.util.Pattern compatible.. .. or, invalid delimiter, etc..
      */
     public YAMLPath( final boolean _verbose, String _yp, final String _delim ) throws YAMLPathException {
         this.verbose = _verbose;
@@ -354,10 +361,9 @@ public class YAMLPath implements Serializable {
 
     /** This equality function is needed for efficient processing within InsertYamlProcessor.java.
      *  This function does NOT assume any common objects/strings.  It does a TRUE value-based comparison.
-     *  It does the a TRUE value-based comparison by taking advantage of the fact that this class is Streamable.
-     *  So.. java.util.Arrays.equals( lhsbytes[], rhsbytes[] )
-     */
-    /** THis function simply compares the prefix and suffixes of LHS & RHS
+     *  It does the a TRUE value-based comparison by taking advantage of the fact that this class is java.io.Streamable.
+     *  So.. basically java.util.Arrays.equals( lhsbytes[], rhsbytes[] )
+     *  More specifically, tHis function simply compares the prefix and suffixes of LHS and RHS (the underlying implementation for java.io.Streamable)
      *  @param _lhs left hand side
      *  @param _rhs right hand side
      *  @return true or fale
