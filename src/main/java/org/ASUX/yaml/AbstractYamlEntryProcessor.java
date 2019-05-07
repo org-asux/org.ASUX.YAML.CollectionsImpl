@@ -68,6 +68,7 @@ public abstract class AbstractYamlEntryProcessor {
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
+     *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public AbstractYamlEntryProcessor( final boolean _verbose, final boolean _showStats ) {
         this.verbose = _verbose;
@@ -93,6 +94,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
+     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -111,6 +113,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
+     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -126,6 +129,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _key The value (typically a String) is what *FAILED* to match the _yamlPath.
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
+     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -137,6 +141,7 @@ public abstract class AbstractYamlEntryProcessor {
      *
      *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
+     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) throws Exception;
 
