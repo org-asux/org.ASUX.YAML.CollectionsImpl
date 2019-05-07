@@ -67,6 +67,7 @@ public class MacroYamlProcessor {
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
+     *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public MacroYamlProcessor(boolean _verbose, final boolean _showStats) {
 		this.verbose = _verbose;
