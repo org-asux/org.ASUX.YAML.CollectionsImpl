@@ -53,6 +53,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
+     *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public DeleteYamlEntry( final boolean _verbose, final boolean _showStats ) {
         super( _verbose, _showStats );
