@@ -62,7 +62,6 @@ public class BatchYamlProcessor {
     // That is being aware of Sequence in which Property-files are loaded.   Can't do that with HashMap
     private LinkedHashMap<String,Properties> AllProps = new LinkedHashMap<String,Properties>();
 
-    private LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = new LinkedHashMap<>();
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -77,9 +76,14 @@ public class BatchYamlProcessor {
     private java.util.Date startTime = null;
     private java.util.Date endTime = null;
 
+    private MemoryAndContext memoryAndContext = null;
+
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
     /** <p>The only constructor - public/private/protected</p>
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public BatchYamlProcessor( final boolean _verbose, final boolean _showStats ) {
         this.verbose = _verbose;
@@ -92,13 +96,23 @@ public class BatchYamlProcessor {
 
     private BatchYamlProcessor() { this.verbose = false;    this.showStats = true;  } // Do Not use this.
 
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    public void setMemoryAndContext( final MemoryAndContext _mnc ) {
+        this.memoryAndContext = _mnc;
+    }
+
     //------------------------------------------------------------------------------
     private static class BatchFileException extends Exception {
         private static final long serialVersionUID = 1L;
         public BatchFileException(String _s) { super(_s); }
     }
 
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
     /** This is the entry point for this class, with the appropriate TRY-CATCH taken care of, hiding the innumerable exception types.
      *  @param _batchFileName batchfile full path (ry to avoid relative paths)
      *  @param _inputMap This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
@@ -443,7 +457,10 @@ public class BatchYamlProcessor {
         final String saveTo_AsIs = _batchCmds.getSaveTo();
         if ( saveTo_AsIs != null ) {
             final String saveTo = MacroYamlProcessor.evaluateMacros( saveTo_AsIs, this.AllProps );
-            Cmd.saveDataIntoReference( this.verbose, saveTo, _inputMap, this.savedOutputMaps );
+            if ( this.memoryAndContext == null || this.memoryAndContext.getContext() == null )
+                throw new BatchFileException( CLASSNAME +": processSaveToLine(): ERROR In "+ _batchCmds.getState() +".. This program currently has NO/Zero memory from one line of the batch file to the next.  And a SaveTo line was encountered for ["+ saveTo +"]" );
+            else
+                this.memoryAndContext.getContext().saveDataIntoReference( saveTo, _inputMap );
         }
     }
 
@@ -454,13 +471,17 @@ public class BatchYamlProcessor {
     {
         final String inputFrom_AsIs = _batchCmds.getUseAsInput();
         final String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
-        final Object o = Cmd.getDataFromReference( this.verbose, inputFrom, this.savedOutputMaps );
-        if ( o instanceof LinkedHashMap ) {
-            @SuppressWarnings("unchecked")
-            final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) o;
-            return retMap3;
+        if ( this.memoryAndContext == null || this.memoryAndContext.getContext() == null ) {
+            throw new BatchFileException( CLASSNAME +": processUseAsInputLine(): ERROR In "+ _batchCmds.getState() +".. This program currently has NO/Zero memory from one line of the batch file to the next.  And a useAsInput line was encountered for ["+ inputFrom +"]" );
         } else {
-            throw new BatchFileException( "ERROR In "+ _batchCmds.getState() +".. Failed to read YAML/JSON from ["+ inputFrom_AsIs +"]" );
+            final Object o = this.memoryAndContext.getContext().getDataFromReference( inputFrom );
+            if ( o instanceof LinkedHashMap ) {
+                @SuppressWarnings("unchecked")
+                final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) o;
+                return retMap3;
+            } else {
+                throw new BatchFileException( "ERROR In "+ _batchCmds.getState() +".. Failed to read YAML/JSON from ["+ inputFrom_AsIs +"]" );
+            }
         }
     }
 
@@ -527,10 +548,12 @@ public class BatchYamlProcessor {
 
     private static abstract class IWhichCMDType {
         protected String [] cmdLineArgs = null;
-        public abstract Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+        public abstract Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                         throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception;
 
-        public String[] convStr2Array( final String _cmdStr, final LinkedHashMap<String,Properties> _allProps ) throws MacroYamlProcessor.MacroException, java.io.IOException {
+        public String[] convStr2Array( final String _cmdStr, final LinkedHashMap<String,Properties> _allProps )
+                                throws MacroYamlProcessor.MacroException, java.io.IOException
+        {
             String cmdStrCompacted = _cmdStr.replaceAll("\\s\\s*", " "); // replace multiple spaces with a single space.
             // cmdStrCompacted = cmdStrCompacted.trim(); // no need.  The _batchCmds already took care of it.
             final String cmdStrNoMacros = MacroYamlProcessor.evaluateMacros( cmdStrCompacted, _allProps ).trim();
@@ -551,13 +574,13 @@ public class BatchYamlProcessor {
             final String cmdStrWIO = _cmdStr + " -i - -o -";
             return super.convStr2Array(cmdStrWIO, _allProps );
         }
-        public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+        public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                 throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception
         {
             // final String [] cmdLineArgs = this.convStr2Array( cmdStrWIO );
             final CmdLineArgs cmdLineArgsObj = new CmdLineArgs( this.cmdLineArgs );
-            final Cmd cmd = new Cmd( cmdLineArgsObj.verbose );
-            cmd.setSavedOutputMaps( _savedOutputMaps );
+            cmdLineArgsObj.verbose = _verbose; // pass on whatever this user specified on cmdline re: --verbose or not.
+            final Cmd cmd = new Cmd( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
             final Object output = cmd.processCommand( cmdLineArgsObj, _inputMap );
             return output;
         }
@@ -566,7 +589,7 @@ public class BatchYamlProcessor {
     private static class AWSCmdType extends IWhichCMDType {
         private static AWSSDK awssdk = null;
         //----------------------
-        public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+        public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                 throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception
         {
             // final String [] cmdLineArgs = this.convStr2Array( _cmdStr );
@@ -578,7 +601,6 @@ public class BatchYamlProcessor {
                 throw new BatchFileException( CLASSNAME +": AWSCmdType.go(AWSCmdType): AWS.SDK command is NOT of sufficient # of parameters ["+ this.cmdLineArgs +"]");
 
             if ( AWSCmdType.awssdk == null ) AWSCmdType.awssdk = AWSSDK.AWSCmdline( _verbose );
-            // AWSSDK.setSavedOutputMaps( this.savedOutputMaps );
 
             final String awscmdStr = this.cmdLineArgs[1];
             final String[] awscmdlineArgs = java.util.Arrays.copyOfRange( this.cmdLineArgs, 2, this.cmdLineArgs.length ); // last parameter: the final index of the range to be copied, exclusive
@@ -619,7 +641,7 @@ public class BatchYamlProcessor {
 
         if ( this.verbose ) for( String s: cmdLineArgs ) System.out.println( "\t"+ s );
         try {
-            final Object output = _cmdType.go( this.verbose, _inputMap, this.savedOutputMaps );
+            final Object output = _cmdType.go( this.verbose, _inputMap, this.memoryAndContext );
             return new Tools(this.verbose).wrapAnObject_intoLinkedHashMap( output );
         } catch (Exception e) {
             e.printStackTrace(System.err);
