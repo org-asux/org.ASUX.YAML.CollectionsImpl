@@ -59,6 +59,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _r this can be either a java.lang.String or a java.util.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans)
+     *  @param _showStats Whether you want a final summary onto console / System.out
      *  @throws java.lang.Exception - if the _r parameter is not as per above Spec
      */
     public InsertYamlEntry( final boolean _verbose, final boolean _showStats, Object _r ) throws Exception {
