@@ -99,22 +99,45 @@ public class Cmd {
     public final boolean verbose;
 
     /**
-     * <p>The only constructor - public/private/protected</p>
-     * @param _verbose Whether you want deluge of debug-output onto System.out.
+     * This is a private LinkedHashMap&lt;String, LinkedHashMap&lt;String, Object&gt; &gt; memoryAndContext = new LinkedHashMap&lt;&gt;(); .. cannot be null.  Most useful for @see org.ASUX.yaml.BatchYamlProcessor - which allows this this class to lookup !propertyvariable.
+     * In case you need access to it - be nice and use it in a read-only manner - use the getter()
      */
-    public Cmd(boolean _verbose) {
+    private final MemoryAndContext memoryAndContext;
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+    /**
+     *  The constructor exclusively for use by  main() classes anywhere.
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @param _showStats Whether you want a final summary onto console / System.out
+     */
+    public Cmd( final boolean _verbose, final boolean _showStats ) {
         this.verbose = _verbose;
+        this.memoryAndContext = new MemoryAndContext( _verbose, _showStats, this );
     }
 
-    private LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = null;
+    /**
+     *  Variation of constructor that allows you to pass-in memory from another previously existing instance of this class.  Useful within {@link BatchYamlProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within {@link BatchYamlProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
+     */
+    public Cmd( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
+        this.verbose = _verbose;
+        this.memoryAndContext = _memoryAndContext;
+    }
 
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
     /**
      * This allows Cmd.java to interact better with BatchYamlProcessor.java, which is the authoritative source of all "saveAs" outputs.
-     * Cmd.java will use this object (this.savedOutputMaps) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
-     * @param _savedOutputMaps
+     * Cmd.java will use this object (this.memoryAndContext) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
+     * @return this.memoryAndContext
      */
-    public void setSavedOutputMaps( final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps ) {
-        this.savedOutputMaps = _savedOutputMaps;
+    public MemoryAndContext getMemoryAndContext() {
+        return this.memoryAndContext;
     }
 
     //=================================================================================
@@ -130,7 +153,7 @@ public class Cmd {
 
         try {
             cmdLineArgs = new CmdLineArgs( args );
-            Cmd cmd = new Cmd(cmdLineArgs.verbose);
+            Cmd cmd = new Cmd( cmdLineArgs.verbose, cmdLineArgs.showStats );
 
             //======================================================================
             // read input, whether it's System.in -or- an actual input-file
@@ -276,7 +299,7 @@ public class Cmd {
      *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
-    public Object processCommand ( CmdLineArgs _cmdLineArgs, final LinkedHashMap<String, Object> _data)
+    public Object processCommand ( CmdLineArgs _cmdLineArgs, final LinkedHashMap<String, Object> _data )
                 throws FileNotFoundException, IOException, Exception,
                 YAMLPath.YAMLPathException, com.esotericsoftware.yamlbeans.YamlException
     {
@@ -294,7 +317,7 @@ public class Cmd {
 
         } else if ( _cmdLineArgs.isTableCmd ) {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isTableCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & tableColumns=[" + _cmdLineArgs.tableColumns +"]" );
-            TableYamlEntry tblcmd = new TableYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, _cmdLineArgs.tableColumns, _cmdLineArgs.yamlPatternDelimiter );
+            TableYamlQuery tblcmd = new TableYamlQuery( _cmdLineArgs.verbose, _cmdLineArgs.showStats, _cmdLineArgs.tableColumns, _cmdLineArgs.yamlPatternDelimiter );
             tblcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             final LinkedList< ArrayList<String> > output = tblcmd.getOutput();
             return output;
@@ -307,7 +330,7 @@ public class Cmd {
 
         } else if ( _cmdLineArgs.isInsertCmd ) {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & loading @Insert-file: " + _cmdLineArgs.insertFilePath);
-            final Object newContent = Cmd.getDataFromReference( this.verbose, _cmdLineArgs.insertFilePath, this.savedOutputMaps);
+            final Object newContent = this.getDataFromReference( _cmdLineArgs.insertFilePath );
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
             InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent );
             inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
@@ -315,7 +338,7 @@ public class Cmd {
 
         } else if ( _cmdLineArgs.isReplaceCmd ) {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
-            final Object replContent = Cmd.getDataFromReference( this.verbose, _cmdLineArgs.replaceFilePath, this.savedOutputMaps);
+            final Object replContent = this.getDataFromReference( _cmdLineArgs.replaceFilePath );
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
             ReplaceYamlEntry replcmd = new ReplaceYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent );
             replcmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
@@ -338,6 +361,7 @@ public class Cmd {
         } else if ( _cmdLineArgs.isBatchCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
             BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
+            batcher.setMemoryAndContext( this.memoryAndContext );
             LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
             batcher.go( _cmdLineArgs.batchFilePath, _data, outpMap );
             if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap =" + outpMap +"\n\n");
@@ -357,21 +381,18 @@ public class Cmd {
     //==============================================================================
 
     /**
-     * 
-     * @param _verbose
-     * @param _src
-     * @param _savedOutputMaps
-     * @return
+     * This functon takes a single parameter that is a javalang.String value - and, either detects it to be inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to something saved in {@link MemoryAndContext} within a Batch-file execution (must be prefixed with a '!')
+     * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
+     * @return an object (either LinkedHashMap, ArrayList or LinkedList)
      * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
-    public static Object getDataFromReference( final boolean _verbose, final String _src,
-                                LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+    public Object getDataFromReference( final String _src  )
                 throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
     {
-        final Tools tools = new Tools(_verbose);
+        final Tools tools = new Tools(this.verbose);
         if ( _src != null ) {
             if ( _src.startsWith("@") ) {
                 final String srcFile = _src.substring(1);
@@ -386,7 +407,7 @@ public class Cmd {
                     com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
                     LinkedHashMap<String, Object> retMap2 = null;
                     retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
-                    if ( _verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
                     retMap2 = tools.JSON2YAML( retMap2 );
                     fs.close();
                     return retMap2;
@@ -397,16 +418,16 @@ public class Cmd {
                     @SuppressWarnings("unchecked")
                     final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
                     reader1.close(); // automatically includes fs.close();
-                    if ( _verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
                     return retMap3;
                 }
                 return null; // compiler is complaining about missing return statement.
             } else if ( _src.startsWith("!") ) {
                 final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
                 // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-                final Object newContent /* LinkedHashMap<String, Object> */ = _savedOutputMaps.get( savedMapName );
-                if (_verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): newContent=" + newContent.toString() );
-                return newContent;
+                final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
+                if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
+                return recalledContent;
             } else {
                 return _src; // The user provided a java.lang.String directly - to be used AS-IS
             }
@@ -415,25 +436,23 @@ public class Cmd {
         }
     }
 
-    //======================================================================
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
 
     /**
-     * 
-     * @param _verbose
-     * @param _dest
-     * @param _inputMap
-     * @param _savedOutputMaps
+     * This function saved _inputMap to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
+     * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
+     * @param _inputMap the object to be saved using the reference provided in _dest paramater
      * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
-    public static void saveDataIntoReference( final boolean _verbose, final String _dest,
-                                final LinkedHashMap<String, Object> _inputMap,
-                                final LinkedHashMap<String, LinkedHashMap<String, Object> > _savedOutputMaps )
+    public void saveDataIntoReference( final String _dest, final LinkedHashMap<String, Object> _inputMap )
                 throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
     {
-        final Tools tools = new Tools(_verbose);
+        final Tools tools = new Tools(this.verbose);
         if ( _dest != null ) {
             if ( _dest.startsWith("@") ) {
                 final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
@@ -449,7 +468,7 @@ public class Cmd {
                     objMapper.writeValue( filewr, _inputMap );
                     filewr.close();
                     fs.close();
-                    if ( _verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.YAML2JSONString(_inputMap) );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.YAML2JSONString(_inputMap) );
                     return;
                 } else if ( destFile.endsWith(".yaml") ) {
                     final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
@@ -457,17 +476,17 @@ public class Cmd {
                     yamlwriter.write( _inputMap );
                     yamlwriter.close();
                     fs.close();
-                    if ( _verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.YAML2JSONString(_inputMap) );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.YAML2JSONString(_inputMap) );
                     return;
                 }
                 return;
             } else {
                 // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
                 final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
-                if ( _savedOutputMaps != null ) {
+                if ( this.memoryAndContext != null ) {
                     // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-                    _savedOutputMaps.put( saveToMapName, _inputMap );  // remove '!' as the 1st character in the destination-reference provided
-                    if (_verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'savedOutputMaps'=" + tools.YAML2JSONString(_inputMap) );
+                    this.memoryAndContext.saveDataIntoMemory( saveToMapName, _inputMap );  // remove '!' as the 1st character in the destination-reference provided
+                    if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + tools.YAML2JSONString(_inputMap) );
                 }
             }
         } else {
