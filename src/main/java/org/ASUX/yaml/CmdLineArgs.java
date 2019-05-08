@@ -93,9 +93,11 @@ public class CmdLineArgs {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** Constructor.
-     * @param args command line argument array - as received as-is from main().
+     *  @param args command line argument array - as received as-is from main().
+     *  @throws Exceptions like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
-    public CmdLineArgs(String[] args) {
+    public CmdLineArgs(String[] args) throws Exception
+    {
         Options options = new Options();
         Option opt;
 
@@ -248,7 +250,7 @@ public class CmdLineArgs {
         } catch (ParseException e) {
             e.printStackTrace(System.err);
             formatter.printHelp("java <jarL> com.esotericsoftware.yamlbeans.CmdLineArgs", options);
-            System.exit(1);
+            throw e;
         }
     }
 
