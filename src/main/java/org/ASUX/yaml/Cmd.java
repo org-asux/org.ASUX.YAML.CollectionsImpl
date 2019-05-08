@@ -332,7 +332,10 @@ public class Cmd {
             if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & loading @Insert-file: " + _cmdLineArgs.insertFilePath);
             final Object newContent = this.getDataFromReference( _cmdLineArgs.insertFilePath );
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
-            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, newContent );
+            // Within a Batch-YAML context, the output of the previous line does NOT have to be a LinkedHashMap.
+            // In such a case, an ArrayList or LinkedList object is converted into one -- by Tools.wrapAnObject_intoLinkedHashMap().
+            // So, we will use the inverse-function Tools.getTheActualObject() to undo that.
+            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, new Tools(this.verbose).getTheActualObject( newContent ) );
             inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             return _data;
 
@@ -392,48 +395,65 @@ public class Cmd {
     public Object getDataFromReference( final String _src  )
                 throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
     {
-        final Tools tools = new Tools(this.verbose);
-        if ( _src != null ) {
-            if ( _src.startsWith("@") ) {
-                final String srcFile = _src.substring(1);
-                final InputStream fs = new FileInputStream( srcFile );
-                if ( srcFile.endsWith(".json") ) {
-                    //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
-                    // final LinkedHashMap<String, Object> retMap2 = ..
-                    // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
-                    //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
-                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
-                    com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
-                    LinkedHashMap<String, Object> retMap2 = null;
-                    retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
-                    retMap2 = tools.JSON2YAML( retMap2 );
-                    fs.close();
-                    return retMap2;
-                }
-                if ( srcFile.endsWith(".yaml") ) {
-                    final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
-                    final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
-                    @SuppressWarnings("unchecked")
-                    final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
-                    reader1.close(); // automatically includes fs.close();
-                    if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
-                    return retMap3;
-                }
-                return null; // compiler is complaining about missing return statement.
-            } else if ( _src.startsWith("!") ) {
-                final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
-                // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-                final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
-                if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
-                return recalledContent;
-            } else {
-                return _src; // The user provided a java.lang.String directly - to be used AS-IS
-            }
-        } else {
+        if ( _src == null || _src.trim().length() <= 0 )
             return null;
-        }
+        final Tools tools = new Tools(this.verbose);
+
+        if ( _src.startsWith("@") ) {
+            final String srcFile = _src.substring(1);
+            final InputStream fs = new FileInputStream( srcFile );
+            if ( srcFile.endsWith(".json") ) {
+                //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+                // final LinkedHashMap<String, Object> retMap2 = ..
+                // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+                //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+                // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+                com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true );
+                objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
+                LinkedHashMap<String, Object> retMap2 = null;
+                retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
+                retMap2 = tools.lintRemover( retMap2 );
+                fs.close();
+                return retMap2;
+            }
+            if ( srcFile.endsWith(".yaml") ) {
+                final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
+                final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
+                @SuppressWarnings("unchecked")
+                final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
+                reader1.close(); // automatically includes fs.close();
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
+                return retMap3;
+            }
+            return null; // compiler is complaining about missing return statement.
+
+        } else if ( _src.startsWith("!") ) {
+            final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
+            // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+            final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
+            if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
+            return recalledContent;
+
+        } else {
+            try{
+                // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+                // and less likely to see a YAML string inline
+                return tools.JSONString2YAML(_src);
+            } catch( Exception e ) {
+                if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as JSON for [" + _src +"]" );
+                try {
+                    // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+                    // and less likely to see a YAML string inline
+                    return tools.YAMLString2YAML( _src, false );
+                } catch(Exception e2) {
+                    if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as YAML for [" + _src +"] also!  So.. treating it as a SCALAR string." );
+                    return _src; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
+                }
+            } // outer-try-catch
+        } // if-else startsWith("@")("!")
     }
 
     //==============================================================================
@@ -468,7 +488,7 @@ public class Cmd {
                     objMapper.writeValue( filewr, _inputMap );
                     filewr.close();
                     fs.close();
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.YAML2JSONString(_inputMap) );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.Map2JSONString(_inputMap) );
                     return;
                 } else if ( destFile.endsWith(".yaml") ) {
                     final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
@@ -476,7 +496,7 @@ public class Cmd {
                     yamlwriter.write( _inputMap );
                     yamlwriter.close();
                     fs.close();
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.YAML2JSONString(_inputMap) );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.Map2YAMLString(_inputMap) );
                     return;
                 }
                 return;
@@ -486,7 +506,7 @@ public class Cmd {
                 if ( this.memoryAndContext != null ) {
                     // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
                     this.memoryAndContext.saveDataIntoMemory( saveToMapName, _inputMap );  // remove '!' as the 1st character in the destination-reference provided
-                    if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + tools.YAML2JSONString(_inputMap) );
+                    if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + tools.Map2YAMLString(_inputMap) );
                 }
             }
         } else {
