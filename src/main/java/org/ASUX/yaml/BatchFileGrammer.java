@@ -56,10 +56,11 @@ public class BatchFileGrammer implements java.io.Serializable {
     public static final String GLOBALVARIABLES = "GLOBAL.VARIABLES";
     public static final String SYSTEM_ENV = "System.env";
 
-	public static final String REGEXP_NAMESUFFIX = "[${}@%a-zA-Z0-9\\.,:_/-]+";
+	public static final String REGEXP_INLINEVALUE = "['\" ${}@%a-zA-Z0-9\\.,:_/-]+";
+	public static final String REGEXP_NAMESUFFIX  =     "[${}@%a-zA-Z0-9\\.,:_/-]+";
 	public static final String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
 	public static final String REGEXP_FILENAME = "[a-zA-Z./]" + REGEXP_NAMESUFFIX;
-	public static final String REGEXP_OBJECT_REFERENCE = "[@!]?" + REGEXP_FILENAME;
+	public static final String REGEXP_OBJECT_REFERENCE = "[@!]" + REGEXP_FILENAME;
 
     //--------------------------------------------------------
     private final boolean verbose;
@@ -314,11 +315,9 @@ public class BatchFileGrammer implements java.io.Serializable {
         } catch (java.io.IOException e) {
             e.printStackTrace(System.err);
             System.err.println( CLASSNAME + ": openBatchFile(): \n\nFailure to read/write IO for file ["+ this.fileName +"]" );
-            // System.exit(102);  Let the commands do a better job of informing the end-user.
         // } catch (Exception e) {
         //     e.printStackTrace(System.err);
         //     System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error:.");
-        //     System.exit(103);
         }
         return false;
     }
@@ -407,7 +406,7 @@ public class BatchFileGrammer implements java.io.Serializable {
 				return;
             }
 
-            Pattern printPattern = Pattern.compile( "^\\s*print\\s+(\\S.*\\S)\\s*$" );
+            Pattern printPattern = Pattern.compile( "^\\s*print\\s+(\\S.*\\S|-)\\s*$" );
             Matcher printMatcher    = printPattern.matcher( line );
             if (printMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ printMatcher.group() +" starting at index "+  printMatcher.start() +" and ending at index "+ printMatcher.end() );    
@@ -427,7 +426,7 @@ public class BatchFileGrammer implements java.io.Serializable {
                 return;
             }
 
-            Pattern useAsInputPattern = Pattern.compile( "^\\s*useAsInput\\s+("+ REGEXP_OBJECT_REFERENCE +")\\s*$" );
+            Pattern useAsInputPattern = Pattern.compile( "^\\s*useAsInput\\s+("+ REGEXP_OBJECT_REFERENCE +"|"+ REGEXP_INLINEVALUE +")\\s*$" );
             Matcher useAsInputMatcher    = useAsInputPattern.matcher( line );
             if (useAsInputMatcher.find()) {
                 if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ useAsInputMatcher.group() +" starting at index "+  useAsInputMatcher.start() +" and ending at index "+ useAsInputMatcher.end() );    
@@ -568,7 +567,7 @@ public class BatchFileGrammer implements java.io.Serializable {
 
             if (scanner.hasNext()) { // default whitespace delimiter used by a scanner
                 final String cmd = scanner.next();
-                if ( this.verbose ) System.out.println( "\t Command=[" + cmd +"]" );
+                if ( this.verbose ) System.out.println( CLASSNAME + ": getCommand(): \t Command=[" + cmd +"]" );
                 scanner.close();
                 return cmd;
             } // if
@@ -580,7 +579,6 @@ public class BatchFileGrammer implements java.io.Serializable {
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
 			System.err.println(CLASSNAME + ": getCommand(): Unexpected Internal ERROR, while checking for patterns for line # "+ this.currentLineNum +"this.currentLine()= [" + this.currentLine() +"]" );
-			System.exit(91); // This is a serious failure. Shouldn't be happening.
             return null;
         }
     }
@@ -653,7 +651,7 @@ public class BatchFileGrammer implements java.io.Serializable {
             }
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
-			System.err.println(CLASSNAME + ": main(): Unexpected Internal ERROR, while processing " + ((args==null || args.length<=0)?"[No CmdLine Args":args[0]) +"]" );
+			System.err.println( CLASSNAME + ": main(): Unexpected Internal ERROR, while processing " + ((args==null || args.length<=0)?"[No CmdLine Args":args[0]) +"]" );
 			System.exit(91); // This is a serious failure. Shouldn't be happening.
         }
     }
