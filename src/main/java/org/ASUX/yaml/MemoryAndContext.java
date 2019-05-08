@@ -98,9 +98,14 @@ public class MemoryAndContext {
      * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
      * @return an object (either LinkedHashMap, ArrayList or LinkedList)
      */
-    public Object getDataFromMemory( final String _src  ) {
+    public Object getDataFromMemory( String _src  ) throws Exception
+    {
         if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): about to lookup memory " );
         if ( _src == null ) return null;
+        _src = _src.trim();
+        if ( _src.length() <= 0 )
+            throw new Exception( CLASSNAME +": getDataFromMemory: Invalid label/name/reference ["+ _src +"] provided to retrieve this data from batch-memory " );
+
         final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
         final Object recalledContent = (this.savedOutputMaps != null) ?  this.savedOutputMaps.get( savedMapName ) : null;
         if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): memory says=" + ((recalledContent==null)?"null":recalledContent.toString()) );
@@ -112,16 +117,21 @@ public class MemoryAndContext {
      * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
      * @param _inputMap the object to be saved using the reference provided in _dest paramater
      */
-    public void saveDataIntoMemory( final String _dest, final LinkedHashMap<String, Object> _inputMap ) {
-        final Tools tools = new Tools(this.verbose);
-        if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): 1: saving into 'memoryAndContext': " + _inputMap.toString() );
+    public void saveDataIntoMemory( String _dest, final LinkedHashMap<String, Object> _inputMap ) throws Exception
+    {
+        // final Tools tools = new Tools(this.verbose);
+        if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoMemory("+ _dest +"): 1: saving into 'memoryAndContext': " + _inputMap.toString() );
         if ( _dest == null || _inputMap == null ) return;
+        _dest = _dest.trim();
+        if ( _dest.length() <= 0 )
+            throw new Exception( CLASSNAME +": saveDataIntoMemory: Invalid label/name/reference ["+ _dest +"] provided to save this data --> " + _inputMap.toString() );
+
         final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
-        if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ saveToMapName +"): 2: saving into 'memoryAndContext': " + _inputMap.toString() );
+        if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoMemory("+ saveToMapName +"): 2: saving into 'memoryAndContext': " + _inputMap.toString() );
         if ( (this.savedOutputMaps != null) && (saveToMapName != null) && (saveToMapName.length() > 0) ) {
             // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
             this.savedOutputMaps.put( saveToMapName, _inputMap );  // remove '!' as the 1st character in the destination-reference provided
-            if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext' --> " + _inputMap.toString() );
+            if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoMemory("+ _dest +"): saved into 'memoryAndContext' --> " + _inputMap.toString() );
         }
     }
 
