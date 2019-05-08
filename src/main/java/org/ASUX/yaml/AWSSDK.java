@@ -58,6 +58,7 @@ import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 // import com.amazonaws.services.ec2.model.Region;
 // import com.amazonaws.services.ec2.model.AvailabilityZone;
+    // https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ec2/model/AvailabilityZone.html
 // import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 // import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest;
 // import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
@@ -240,10 +241,26 @@ public class AWSSDK {
         final AmazonEC2 ec2 = this.getAWSEC2Hndl( _regionStr );
         DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
         final ArrayList< LinkedHashMap<String,Object> > retarr = new ArrayList<>();
+
+        // https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ec2/model/AvailabilityZone.html
         for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
             // System.out.printf( "Found availability zone %s with status %s in region %s\n", zone.getZoneName(), zone.getState(), zone.getRegionName());
             // ASSUMPTION: I printed zone.toString() to STDOUT, and noted it's proper JSON.
-            String s = zone.toString().replaceAll("=",":");
+            // String s = zone.toString().replaceAll("=",":");
+            // above zone.toString returns INVALID JSON.. that causes problems elsewhere.. when loading these strings.
+            // So, manually have to create JSON here.
+            String s = "{ ";
+            s+= "ZoneName: '"+ zone.getZoneName()   +"',";
+            s+= "ZoneId: '"  + zone.getZoneId()     +"',";
+            s+= "State: '"   + zone.getState()      +"',";
+            s+= "RegionName: '"+ zone.getRegionName() +"',";
+            String sm = "";
+            for( AvailabilityZoneMessage azm: zone.getMessages() ) {
+                if (   !   sm.equals("") ) sm += ",";
+                s += "'"+ azm.getMessage() + "'";
+            }
+            s+= "Messages: [" + sm + "] }";
+
             if ( this.verbose ) System.out.println( CLASSNAME +": describeAZs(): aws ec2 describe-az command output corrected to be JSON-compatible as ["+ s +"]" );
             final LinkedHashMap<String,Object> map = new Tools(this.verbose).JSONString2YAML( s );
             if ( this.verbose ) System.out.println( map.toString() );
