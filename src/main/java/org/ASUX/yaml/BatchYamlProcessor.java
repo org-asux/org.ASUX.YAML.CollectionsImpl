@@ -148,7 +148,6 @@ public class BatchYamlProcessor {
         } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             e.printStackTrace(System.err);
             System.err.println( CLASSNAME + ": go():\n\nERROR In "+ batchCmds.getState()  +".   SERIOUS Internal error: unable to process YAML.  See details above.");
-            // System.exit(9);
         } catch (BatchFileException bfe) {
             bfe.printStackTrace(System.err);
             System.err.println(CLASSNAME + ": go():\n\n" + bfe.getMessage() );
@@ -158,7 +157,6 @@ public class BatchYamlProcessor {
         } catch (Exception e) {
             e.printStackTrace(System.err);
             System.err.println( CLASSNAME + ": go(): Unknown Serious Internal error.\n\n ERROR while processing "+ batchCmds.getState() +".   See details above");
-            // System.exit(103);
         }
 
         return false;
@@ -201,7 +199,7 @@ public class BatchYamlProcessor {
             @SuppressWarnings("unchecked")
             final LinkedHashMap<String, Object> map = (LinkedHashMap<String, Object>) _input;
             inputMap = map;
-            forLoopProps.setProperty( FOREACH_ITER_VALUE, tools.JSON2String(inputMap) );
+            forLoopProps.setProperty( FOREACH_ITER_VALUE, tools.Map2YAMLString(inputMap) );
         } else if ( _input instanceof String ) {
             // WARNING: THIS IS NOT NEGOTIABLE .. I do NOT (can NOT) have an Input-Map (non-Scalar) as parameter !!!!!!!!!!!!!!!!!!!!!
             // so, we start off this function with an EMPTY 'inputMap'
@@ -217,12 +215,14 @@ public class BatchYamlProcessor {
             tempOutputMap = new LinkedHashMap<String, Object>();
 
             _batchCmds.nextLine(); // we can always get the return value of this statement .. via _batchCmds.getCurrentLine()
-            if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"): START of while-loop for "+ _batchCmds.getState() +" .. for input="+ tools.JSON2String(inputMap) +"]" );
+            if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"): START of while-loop for "+ _batchCmds.getState() +" .. for input=["+ tools.Map2YAMLString(inputMap) +"]" );
             if ( _batchCmds.isLine2bEchoed() ) System.out.println( "Echo (As-Is): "+ _batchCmds.currentLine() );
+            if ( _batchCmds.isLine2bEchoed() ) System.out.println( "Echo (Macro-substituted): "+  MacroYamlProcessor.evaluateMacros( _batchCmds.currentLine(), this.AllProps ) );
 
             switch( _batchCmds.getCmdType() ) {
                 case Cmd_MakeNewRoot:
-                    tempOutputMap.put( _batchCmds.getMakeNewRoot(), "" ); // Very simple YAML:-    NewRoot: <blank>
+                    final String newRootElem = MacroYamlProcessor.evaluateMacros( _batchCmds.getMakeNewRoot(), this.AllProps );
+                    tempOutputMap.put( newRootElem, "" ); // Very simple YAML:-    NewRoot: <blank>
                     this.runcount ++;
                     break;
                 case Cmd_Batch:
@@ -237,7 +237,7 @@ public class BatchYamlProcessor {
                     break;
                 case Cmd_Foreach:
                     if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(foreach): \t'foreach'_cmd detected'");
-                    if ( this.verbose ) System.out.println( CLASSNAME +": processBatch(foreach): InputMap = "+ tools.JSON2String(inputMap) );
+                    if ( this.verbose ) System.out.println( CLASSNAME +": processBatch(foreach): InputMap = "+ tools.Map2YAMLString(inputMap) );
                     final LinkedHashMap<String, Object> retMap4 = processFOREACHCmdForObject( _batchCmds, inputMap  );
                     tempOutputMap.putAll( retMap4 );
                     // since we processed the lines !!INSIDE!! the 'foreach' --> 'end' block .. via recursion.. we need to skip all those lines here.
@@ -287,11 +287,10 @@ public class BatchYamlProcessor {
             // this line below must be the very last line in the loop
             inputMap = tempOutputMap; // because we might be doing ANOTHER iteraton of the While() loop.
 
-            if ( _batchCmds.isLine2bEchoed() ) System.out.println( "Echo (Macro-substituted): "+  MacroYamlProcessor.evaluateMacros( _batchCmds.currentLine(), this.AllProps ) );
-            if ( this.verbose ) System.out.println( " _________________________ processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"):  BOTTOM of WHILE-loop: tempOutputMap =" + tools.JSON2String(tempOutputMap) +"");
+            if ( this.verbose ) System.out.println( " _________________________ processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"):  BOTTOM of WHILE-loop: tempOutputMap =" + tools.Map2YAMLString(tempOutputMap) +"");
         } // while loop
 
-        if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(--@END-- recursion="+ _bInRecursion +"):  tempOutputMap =" + tools.JSON2String(tempOutputMap) +"\n\n");
+        if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(--@END-- recursion="+ _bInRecursion +"):  tempOutputMap =" + tools.Map2YAMLString(tempOutputMap) +"\n\n");
         // reached end of file.
         return tempOutputMap;
     }
@@ -480,7 +479,7 @@ public class BatchYamlProcessor {
                 final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) o;
                 return retMap3;
             } else {
-                throw new BatchFileException( "ERROR In "+ _batchCmds.getState() +".. Failed to read YAML/JSON from ["+ inputFrom_AsIs +"]" );
+                throw new BatchFileException( "ERROR In "+ _batchCmds.getState() +".. Failed to read YAML/JSON from ["+ inputFrom_AsIs +"].  We have type="+ o.getClass().getName()  +" = ["+ o.toString() +"]" );
             }
         }
     }
@@ -495,10 +494,11 @@ public class BatchYamlProcessor {
     {
         final Tools.Tuple<String,String> kv = _batchCmds.getPropertyKV(); // could be null, implying NOT a kvpair
         if ( kv != null) {
+            final String kwom = MacroYamlProcessor.evaluateMacros( kv.key, this.AllProps );
+            final String fnwom = MacroYamlProcessor.evaluateMacros( kv.val, this.AllProps );
             final Properties props = new Properties();
-            final String fn = MacroYamlProcessor.evaluateMacros( kv.val, this.AllProps );
-            props.load( new java.io.FileInputStream( fn ) );
-            this.AllProps.put( kv.key, props ); // This line is the action taken by this 'PropertyFile' line of the batchfile
+            props.load( new java.io.FileInputStream( fnwom ) );
+            this.AllProps.put( kwom, props ); // This line is the action taken by this 'PropertyFile' line of the batchfile
         }
         return inputMap; // as nothing changes re: Input and Output Maps.
     }
@@ -506,21 +506,32 @@ public class BatchYamlProcessor {
 
     private LinkedHashMap<String, Object> onPrintCmd(
         final BatchFileGrammer _batchCmds, final LinkedHashMap<String, Object> inputMap, final LinkedHashMap<String, Object> tempOutputMap )
-        throws MacroYamlProcessor.MacroException
+        throws MacroYamlProcessor.MacroException, Exception
     {
-        final String printLine = _batchCmds.getPrintExpr();
-        if ( this.verbose ) System.out.print( ">>>>>>>>>>>>> print line is ["+printLine +"]" );
-        if ( printLine != null ) {
-            String outputStr = MacroYamlProcessor.evaluateMacros( printLine, this.AllProps );
-            if ( outputStr.endsWith("\\n") ) {
-                outputStr = outputStr.substring(0, outputStr.length()-2); // chop out the 2 characters '\n'
-                System.out.println( outputStr +" " );
+        final String printExpression = _batchCmds.getPrintExpr();
+        if ( this.verbose ) System.out.print( ">>>>>>>>>>>>> print line is ["+printExpression +"]" );
+        if ( (printExpression != null) && (  !  printExpression.equals("-")) )  {
+            String outputStr = MacroYamlProcessor.evaluateMacros( printExpression, this.AllProps );
+            if ( outputStr.trim().endsWith("\\n") ) {
+                outputStr = outputStr.substring(0, outputStr.length()-2); // chop out the 2-characters '\n'
+                final Object o = this.memoryAndContext.getDataFromMemory( outputStr.trim() );
+                if ( o != null )
+                    System.out.println( o ); // println (end-of-line character outputted)
+                else
+                    System.out.println( outputStr ); // println (end-of-line character outputted)
             } else {
-                System.out.print( outputStr +" " );
+                final Object o = this.memoryAndContext.getDataFromMemory( outputStr.trim() );
+                if ( o != null )
+                    System.out.println( o ); // println (end-of-line character outputted)
+                else
+                    System.out.print( outputStr +" " ); // print only.  NO EOL character outputted.
             }
             // ATTENTION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // DO NOT COMMENT THIS ABOVE OUT.  Do NOT ADD AN IF CONDITION to this.  This is by design.
+            // DO NOT COMMENT THIS ABOVE.  Do NOT ADD AN IF CONDITION to this.  This is by design.
             System.out.flush();
+        } else {
+            // if the command/line is just the word 'print' .. print the inputMap
+            System.out.println( new Tools(this.verbose).Map2YAMLString(inputMap) );
         }
         return inputMap; // as nothing changes re: Input and Output Maps.
     }
@@ -645,7 +656,9 @@ public class BatchYamlProcessor {
             return new Tools(this.verbose).wrapAnObject_intoLinkedHashMap( output );
         } catch (Exception e) {
             e.printStackTrace(System.err);
-            throw new BatchFileException("ERROR In "+ _batchCmds.getState() +".. Failed to run the command in current line." );
+            final String estr = "ERROR In "+ _batchCmds.getState() +".. Failed to run the command in current line.";
+            System.err.println( CLASSNAME + estr );
+            throw new BatchFileException( estr );
         }
 }
 
