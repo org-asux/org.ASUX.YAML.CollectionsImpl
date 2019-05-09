@@ -176,7 +176,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
      * See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
-     *  @throws Exceptions like ClassNotFoundException while trying to serialize and deserialize the input-parameter
+     *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
     protected void atEndOfInput( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath ) throws Exception
     {

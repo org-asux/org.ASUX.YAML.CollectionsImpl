@@ -94,7 +94,7 @@ public class CmdLineArgs {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** Constructor.
      *  @param args command line argument array - as received as-is from main().
-     *  @throws Exceptions like ClassNotFoundException while trying to serialize and deserialize the input-parameter
+     *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
     public CmdLineArgs(String[] args) throws Exception
     {

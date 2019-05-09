@@ -97,6 +97,7 @@ public class MemoryAndContext {
      * This functon takes a single parameter that is a javalang.String value - and, either detects it to be inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to something saved in {@link MemoryAndContext} within a Batch-file execution (must be prefixed with a '!')
      * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
      * @return an object (either LinkedHashMap, ArrayList or LinkedList)
+     *  @throws Exception when input-parameter is invalid.  Rather than fail silently, this throws.
      */
     public Object getDataFromMemory( String _src  ) throws Exception
     {
@@ -116,6 +117,7 @@ public class MemoryAndContext {
      * This function saved _inputMap to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
      * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
      * @param _inputMap the object to be saved using the reference provided in _dest paramater
+     *  @throws Exception when input-parameter _dest is invalid.  Rather than fail silently, this throws.
      */
     public void saveDataIntoMemory( String _dest, final LinkedHashMap<String, Object> _inputMap ) throws Exception
     {
