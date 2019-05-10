@@ -162,9 +162,16 @@ public abstract class AbstractYamlEntryProcessor {
     {
         final LinkedList<String> end2EndPaths = new LinkedList<>();
         this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
-        final boolean retval = this.recursiveSearch( _map, this.yp, end2EndPaths );
+        boolean retval = false;
+        if ( YAMLPath.ROOTLEVEL.equals( this.yp.getRaw() ) ) {
+            retval = true;
+            if ( this.verbose ) System.out.println( CLASSNAME +": searchYamlForPattern("+ _yamlPathStr +"):  Skipping this.recursiveSearch() as the YAML-Path pattern is ROOT-ELEM" );
+        } else {
+            if ( this.verbose ) System.out.println( CLASSNAME +": searchYamlForPattern("+ _yamlPathStr +"):  invoking this.recursiveSearch().. .." );
+            retval = this.recursiveSearch( _map, this.yp, end2EndPaths );
+        }
         atEndOfInput( _map, this.yp );
-        // What should be done if atEndOfInput returns false.. ?
+//  ???? What should be done if atEndOfInput returns false.. ??? by the sub-classes?
         return retval;
     }
 
@@ -253,6 +260,7 @@ public abstract class AbstractYamlEntryProcessor {
                 if ( ! lookForwardYAMLPath.hasNext() ) {
                     // NO more recursion feasible!
                     // well! we've matched end2end .. to a "Map" element (instead of String elem)!
+                    aMatchFound = true;
 
                     // let sub-classes determine what to do here
                     final boolean callbkRet3 = onEnd2EndMatch(_map, _yamlPath, key, null, cloneOfE2EPaths); // location #1 for end2end match
