@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<name>${project.groupId}:${project.artifactId}</name>
-	<groupId>org.ASUX</groupId>
+	<groupId>org.asux</groupId>
 	<artifactId>yaml</artifactId>
     
     <version>1.0</version>
@@ -30,7 +30,7 @@
 	<licenses>
 		<license>
 			<name>BSD 3-Clause License</name>
-			<url>https://opensource.org/licenses/BSD-3-Clause/url>
+			<url>https://opensource.org/licenses/BSD-3-Clause</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
