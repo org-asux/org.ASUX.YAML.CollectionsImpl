@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<name>yaml</name>
-	<groupId>org.ASUX</groupId>
+	<groupId>org.asux</groupId>
 	<artifactId>yaml</artifactId>
     
     <version>1.0</version>
