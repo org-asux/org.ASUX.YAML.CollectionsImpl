@@ -64,7 +64,7 @@ import java.io.IOException;
     .. ..
     for loop ..
         if ( ! _yamlPath.hasNext() ) return false; // YAML path has ended
-        final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
+        final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full this.yamlPathStr)
         System.out.println(CLASSNAME + ": @# " + _yamlPath.index() +"\t"+ _yamlPath.getPrefix() +"\t"+ _yamlPath.get() +"\t"+ _yamlPath.getSuffix() + "\t  matched '"
         .. ..
         final YAMLPath cloneOfYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in and out of sub-yaml-elements
@@ -78,6 +78,12 @@ public class YAMLPath implements Serializable {
     public static final String DEFAULTPRINTDELIMITER = "\t";
     public static final String MATCHANYSINGLEPATHELEMENT = ".*";
 
+    // Note: These constants are also duplicated into BatchFileGrammer.java
+	public static final String REGEXP_NAMESUFFIX  =     "[${}@%a-zA-Z0-9\\.,:_/-]+";
+	public static final String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
+    // public static final String ROOTLEVEL = "<RootLevel:("+ REGEXP_NAME +")>";
+    public static final String ROOTLEVEL = "/";
+
 	public static final String CLASSNAME = "org.ASUX.yaml.YAMLPath";
 
     //------------------------------------------------------------------------------
@@ -87,7 +93,7 @@ public class YAMLPath implements Serializable {
     public final boolean verbose;
 
     public boolean isValid = false;
-    public final String yamlPath;
+    public final String yamlPathStr;
     public final String delimiter;
     public final String prntDelimiter;
     public String[] yamlElemArr = new String[]{"UNinitialized", "yamlElemArr"};
@@ -136,7 +142,7 @@ public class YAMLPath implements Serializable {
         if ( _yp.length() <= 0 )
             throw new YAMLPathException( CLASSNAME +" Constructor: semantically EMPTY Pattern (java.util.Pattern compatible) provided ["+ _yp +"]" ); // invalid YAML Path.  Let "this.isValid" stay as false
         this.delimiter = _delim;
-        this.yamlPath = _yp; //save it
+        this.yamlPathStr = _yp; //save it
         this.prntDelimiter = DEFAULTPRINTDELIMITER; // _delim.replaceAll("\\\\", ""); // save it in human-readable form (to print out paths -- and for NO OTHER purpose)
         // System.out.println( "x\\.y".replaceAll​("\\\\", "") );
 
@@ -200,6 +206,7 @@ public class YAMLPath implements Serializable {
         return this.isValid;
     }
 
+    //=======================================================================
     /** For example strings like "<code>paths.*.*.responses.200</code>", your first call will return true.  If you call {@link next} <b>up to 4 times</b>, this function will return true.  After you call next() a 5th time, this function will return false.
      *  @return true means {@link get} will return a valid string, GUARANTEED to NOT Throw any runtime exception :-)
      */
@@ -253,6 +260,13 @@ public class YAMLPath implements Serializable {
             return this.yamlElemArr[this.indexPtr];
         else
             return null;
+    }
+
+    /** For example: if the cmdline or batch-yaml files provide a YAML-Path pattern strings like "<code>paths.*.*.responses.200</code>", this function returns EXACTLY that (as-is)
+     * @return String as provided to constructor
+    */
+    public String getRaw() {
+        return this.yamlPathStr;
     }
 
     /** For example strings like "<code>paths.*.*.responses.200</code>", your first call will return 0 (index numbering per C/Java array-index standard).  Every call to next() will increment the return value of this function.  When you call next() a 5th/6th/7th/../100th time for above example, this function will return the same value then onwards (= # of elements in the YAMLPath-string.  In this example, that is 5)
@@ -326,7 +340,7 @@ public class YAMLPath implements Serializable {
      */
     public String toString() {
         if ( this.isValid )
-            return this.getPrefix() +"\t"+ this.getSuffix() +"@"+ this.index();
+            return this.getPrefix() +"\t@"+ this.index() +":"+ this.get() +"\t"+ this.getSuffix();
         else
             return "Invalid object of "+CLASSNAME;
     }
@@ -359,11 +373,13 @@ public class YAMLPath implements Serializable {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=======================================================================
 
-    /** This equality function is needed for efficient processing within InsertYamlProcessor.java.
-     *  This function does NOT assume any common objects/strings.  It does a TRUE value-based comparison.
-     *  It does the a TRUE value-based comparison by taking advantage of the fact that this class is java.io.Streamable.
-     *  So.. basically java.util.Arrays.equals( lhsbytes[], rhsbytes[] )
-     *  More specifically, tHis function simply compares the prefix and suffixes of LHS and RHS (the underlying implementation for java.io.Streamable)
+    /** See also {@link #equals}.
+     *  This equality function is needed for efficient processing within InsertYamlProcessor.java.
+     *  This function does NOT assume any common objects/strings.
+     *  It does a TRUE value-based comparison.
+     *  This does !!!NOT!!! tke advantage of the fact that this class is java.io.Streamable.
+     *  So.. basically this function simply compares the prefix and suffixes of LHS and RHS (the underlying implementation for java.io.Streamable).
+     *  By implications, if you have cloned a YAMLPath instance and called next() on the clone, both the original and clone areEquivalent===true;
      *  @param _lhs left hand side
      *  @param _rhs right hand side
      *  @return true or fale
@@ -372,22 +388,69 @@ public class YAMLPath implements Serializable {
         if ( _lhs == null && _rhs == null ) return true;
         if ( _lhs == null || _lhs.getPrefix() == null || _lhs.getSuffix() == null ) return false;
         return _lhs.getPrefix().equals(_rhs.getPrefix()) && _lhs.getSuffix().equals(_rhs.getSuffix());
-        // try {
-            // ByteArrayOutputStream baosLHS = new ByteArrayOutputStream();
-            // ObjectOutputStream oosLHS = new ObjectOutputStream(baosLHS);
-            // oosLHS.writeObject(_lhs);
-            // ByteArrayOutputStream baosRHS = new ByteArrayOutputStream();
-            // ObjectOutputStream oosRHS = new ObjectOutputStream(baosRHS);
-            // oosRHS.writeObject(_rhs);
-            // return java.util.Arrays.equals( baosLHS.toByteArray(), baosRHS.toByteArray() );
-        // } catch (IOException e) {
-        //     return null;
-        // } catch (ClassNotFoundException e) {
-        //     return null;
-        // }
     }
 
+    /** See also {@link #areEquivalent}.
+     *  This function does NOT assume any common objects/strings.
+     *  It does a TRUE value-based comparison - by taking advantage of the fact that this class is java.io.Streamable.
+     *  By implications, if you have cloned a YAMLPath instance and called next() on the clone, they are NOT equal.
+     *  @param _lhs left hand side
+     *  @param _rhs right hand side
+     *  @return true or fale
+     */
+    public static boolean equals( YAMLPath _lhs, YAMLPath _rhs ) {
+        try {
+            ByteArrayOutputStream baosLHS = new ByteArrayOutputStream();
+            ObjectOutputStream oosLHS = new ObjectOutputStream(baosLHS);
+            oosLHS.writeObject(_lhs);
+            ByteArrayOutputStream baosRHS = new ByteArrayOutputStream();
+            ObjectOutputStream oosRHS = new ObjectOutputStream(baosRHS);
+            oosRHS.writeObject(_rhs);
+            return java.util.Arrays.equals( baosLHS.toByteArray(), baosRHS.toByteArray() );
+        } catch (IOException e) {
+            return false;
+        // } catch (ClassNotFoundException e) {
+        //     return null;
+        }
+    }
+
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    // /**
+    //  * If the YAML-Path-pattern is exactly equal to {@link #ROOTLEVEL} then it means the YAML-command (most likely INSERT) wants to work at the very top-level YAML-element.
+    //  * @return Either null or the "new Root-level Key-name", whether the user entered the value "<RootLevel:NewRootKeyName>" (exactly as defined by {@link #ROOTLEVEL}).
+    //  */
+    // public String atRootLevel() {
+        // // return ROOTLEVEL.matches(this.yamlPathStr);
+        // try {
+        //     Pattern rootLevelPattern = Pattern.compile( YAMLPath.ROOTLEVEL );
+        //     Matcher rootLevelMatcher    = rootLevelPattern.matcher( this.yamlPathStr );
+        //     if (rootLevelMatcher.find()) {
+        //         if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): I found the text "+ rootLevelMatcher.group() +" starting at index "+  rootLevelMatcher.start() +" and ending at index "+ rootLevelMatcher.end() );    
+        //         final String rootLevelKey = rootLevelMatcher.group(1); // line.substring( rootLevelMatcher.start(), rootLevelMatcher.end() );
+        //         if ( this.verbose ) System.out.println( CLASSNAME + ": atEndOfInput(): \t rootLevelKey=[" + rootLevelKey +"]" );
+        //         // rootLevelKey = MacroYamlProcessor.evaluateMacros( cmd_AsIs, ___.AllProps ).trim();
+        //         // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //         // Above evaluateMacros() invocation cannot be (and IMPORTANTLY, SHOULD NOT) done.. 
+        //         // .. as we do NOT (and IMPORTANTLY, SHOULD NOT) have access to 'AllProps' like BatchYamlProcessor.java or Cmd.java do!
+        //         // Instead, make BatchYamlProcess pre-process the parameters passed to this InsertYamlEntry.java
+        //         return rootLevelKey;
+        //     } else
+        //         return null;
+
+        // } catch (PatternSyntaxException e) {
+        //     e.printStackTrace(System.err);
+        //     System.err.println( CLASSNAME + ": atRootLevel("+ this.yamlPathStr +"): Unexpected Internal ERROR 1 while parsing pattern "+ YAMLPath.ROOTLEVEL );
+        //     System.exit(91); // This is a serious failure. Shouldn't be happening.
+        // }
+        // return null;
+    // }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
 
 //    public static void main(String[] args) {
 //        // System.out.println(CLASSNAME + ": started with '"+args[0]+"'");
