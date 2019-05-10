@@ -56,7 +56,7 @@ public class BatchFileGrammer implements java.io.Serializable {
     public static final String GLOBALVARIABLES = "GLOBAL.VARIABLES";
     public static final String SYSTEM_ENV = "System.env";
 
-	public static final String REGEXP_INLINEVALUE = "['\" ${}@%a-zA-Z0-9\\.,:_/-]+";
+	public static final String REGEXP_INLINEVALUE = "['\" ${}@%a-zA-Z0-9\\[\\]\\.,:_/-]+";
 	public static final String REGEXP_NAMESUFFIX  =     "[${}@%a-zA-Z0-9\\.,:_/-]+";
 	public static final String REGEXP_NAME = "[a-zA-Z$]" + REGEXP_NAMESUFFIX;
 	public static final String REGEXP_FILENAME = "[a-zA-Z./]" + REGEXP_NAMESUFFIX;
