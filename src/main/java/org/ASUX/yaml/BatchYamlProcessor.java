@@ -469,7 +469,8 @@ public class BatchYamlProcessor {
                                 BatchFileException, com.esotericsoftware.yamlbeans.YamlException
     {
         final String inputFrom_AsIs = _batchCmds.getUseAsInput();
-        final String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
+        String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
+        inputFrom = new Tools(this.verbose).removeBeginEndQuotes( inputFrom );
         if ( this.memoryAndContext == null || this.memoryAndContext.getContext() == null ) {
             throw new BatchFileException( CLASSNAME +": processUseAsInputLine(): ERROR In "+ _batchCmds.getState() +".. This program currently has NO/Zero memory from one line of the batch file to the next.  And a useAsInput line was encountered for ["+ inputFrom +"]" );
         } else {
@@ -514,11 +515,16 @@ public class BatchYamlProcessor {
             String outputStr = MacroYamlProcessor.evaluateMacros( printExpression, this.AllProps );
             if ( outputStr.trim().endsWith("\\n") ) {
                 outputStr = outputStr.substring(0, outputStr.length()-2); // chop out the 2-characters '\n'
-                final Object o = this.memoryAndContext.getDataFromMemory( outputStr.trim() );
-                if ( o != null )
-                    System.out.println( o ); // println (end-of-line character outputted)
-                else
-                    System.out.println( outputStr ); // println (end-of-line character outputted)
+                if ( outputStr.trim().length() > 0 ) {
+                    // the print command has text other than the \n character
+                    final Object o = this.memoryAndContext.getDataFromMemory( outputStr.trim() );
+                    if ( o != null )
+                        System.out.println( o ); // println (end-of-line character outputted)
+                    else
+                        System.out.println( outputStr ); // println (end-of-line character outputted)
+                } else { // if length() <= 0 .. which prints all we have is a simple 'print \n'
+                    System.out.println(); // OK. just print a new line, as the print command is a simple 'print \n'
+                }
             } else {
                 final Object o = this.memoryAndContext.getDataFromMemory( outputStr.trim() );
                 if ( o != null )
@@ -562,7 +568,7 @@ public class BatchYamlProcessor {
         public abstract Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                         throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception;
 
-        public String[] convStr2Array( final String _cmdStr, final LinkedHashMap<String,Properties> _allProps )
+        public String[] convStr2Array( final boolean _verbose, final String _cmdStr, final LinkedHashMap<String,Properties> _allProps )
                                 throws MacroYamlProcessor.MacroException, java.io.IOException
         {
             String cmdStrCompacted = _cmdStr.replaceAll("\\s\\s*", " "); // replace multiple spaces with a single space.
@@ -572,23 +578,24 @@ public class BatchYamlProcessor {
 
             // https://mvnrepository.com/artifact/com.opencsv/opencsv
             final java.io.StringReader reader = new java.io.StringReader( cmdStrNoMacros );
-            final com.opencsv.CSVParser parser = new com.opencsv.CSVParserBuilder().withSeparator(' ').withIgnoreQuotations(false).build();
+            final com.opencsv.CSVParser parser = new com.opencsv.CSVParserBuilder().withSeparator(' ').withQuoteChar('\'').withIgnoreQuotations(false).build();
             final com.opencsv.CSVReader cmdLineParser = new com.opencsv.CSVReaderBuilder( reader ).withSkipLines(0).withCSVParser( parser ).build();
             this.cmdLineArgs = cmdLineParser.readNext(); // pretend we're reading the 1st line ONLY of a CSV file.
-            return cmdLineArgs;
+            // some of the strings in this.cmdLineArgs may still have a starting and ending single/double-quote
+            this.cmdLineArgs = new Tools(_verbose).removeBeginEndQuotes( this.cmdLineArgs );
+            return this.cmdLineArgs;
         }
     }
     //----------------------
     private static class YAMLCmdType extends IWhichCMDType {
          // technically override -.. but, actually extend!
-        public String[] convStr2Array( final String _cmdStr, final LinkedHashMap<String,Properties> _allProps ) throws MacroYamlProcessor.MacroException, java.io.IOException {
+        public String[] convStr2Array( final boolean _verbose, final String _cmdStr, final LinkedHashMap<String,Properties> _allProps ) throws MacroYamlProcessor.MacroException, java.io.IOException {
             final String cmdStrWIO = _cmdStr + " -i - -o -";
-            return super.convStr2Array(cmdStrWIO, _allProps );
+            return super.convStr2Array( _verbose, cmdStrWIO, _allProps );
         }
         public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                 throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception
         {
-            // final String [] cmdLineArgs = this.convStr2Array( cmdStrWIO );
             final CmdLineArgs cmdLineArgsObj = new CmdLineArgs( this.cmdLineArgs );
             cmdLineArgsObj.verbose = _verbose; // pass on whatever this user specified on cmdline re: --verbose or not.
             final Cmd cmd = new Cmd( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
@@ -603,7 +610,6 @@ public class BatchYamlProcessor {
         public Object go( final boolean _verbose, final LinkedHashMap<String, Object> _inputMap, final MemoryAndContext _memoryAndContext )
                 throws java.io.FileNotFoundException, java.io.IOException, java.lang.Exception
         {
-            // final String [] cmdLineArgs = this.convStr2Array( _cmdStr );
             // for( String s: this.cmdLineArgs) System.out.print( "\t"+s );   System.out.println("\n\n");
 
             // aws.sdk ----list-regions us-east-2
@@ -648,7 +654,7 @@ public class BatchYamlProcessor {
         if ( cmdStr2 == null )
             return null;
 
-        final String [] cmdLineArgs = _cmdType.convStr2Array( _batchCmds.currentLine(), this.AllProps );
+        final String [] cmdLineArgs = _cmdType.convStr2Array( this.verbose, _batchCmds.currentLine(), this.AllProps );
 
         if ( this.verbose ) for( String s: cmdLineArgs ) System.out.println( "\t"+ s );
         try {
