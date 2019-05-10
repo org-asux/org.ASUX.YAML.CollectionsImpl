@@ -141,12 +141,12 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     protected boolean onEnd2EndMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths ) {
 
         if ( this.verbose ) {
-            System.out.print("onEnd2EndMatch: _end2EndPaths =");
+            System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
         }
         this.existingPathsForInsertion.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
-        if ( this.verbose ) System.out.println("onE2EMatch: count="+this.existingPathsForInsertion.size());
+        if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch(): count="+this.existingPathsForInsertion.size());
         return true;
     }
 
@@ -180,14 +180,45 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath ) throws Exception
     {
+        if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is the entire YAML-Path pattern
+        {
+            final Tools tools = new Tools( this.verbose );
+            final Tools.OutputObjectTypes typ = tools.getOutputObjectType( this.newData2bInserted );
+    
+            switch(typ) {
+                case Type_KVPair:  // singular;  No 's' character @ end.  This is Not KVPairs
+                    @SuppressWarnings("unchecked")
+                    final Tools.Tuple< String,String > kvpair = ( Tools.Tuple< String,String > ) this.newData2bInserted;
+                    _map.put( kvpair.key, kvpair.val );
+                    break;
+                case Type_KVPairs:  // PLURAL;  Note the 's' character @ end.  This is Not KVPair (singular)
+                case Type_LinkedHashMap:
+                    @SuppressWarnings("unchecked")
+                    final LinkedHashMap<String, Object> newmap = (LinkedHashMap<String, Object>) this.newData2bInserted;
+                    _map.putAll( newmap );
+                    break;
+
+                case Type_String:
+                case Type_ArrayList: // array of arrays?  What am I going to do?  What does such a data structure mean? In what real-world use-case scenario?
+                case Type_LinkedList:
+                case Type_Unknown:
+                    throw new Exception( CLASSNAME +": atEndOfInput(): Serious ERROR: You want to insert @ /, but provided newYaml that is of type ["+ typ.toString() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+            } // end switch
+
+            return;
+            // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // function returns here
+        }
+
         // first loop goes over Paths that already exist, in the sense the leaf-element exists, and we'll add a new Child element to that.
         for ( Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.existingPathsForInsertion ) {
             final String rhsStr = tpl.val.toString();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): key=["+ tpl.key +"], while map-in-context="+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) );
             // tpl.val.remove(tpl.key);
 
             // Now put in a new entry - with the replacement data!
             tpl.val.put( tpl.key, Tools.deepClone( this.newData2bInserted ) );
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): key=["+ tpl.key +"], it's new value="+ this.newData2bInserted.toString() );
             // If there are multiple matches.. then without deepclone, the EsotericSoftware
             // library, will use "&1" to define your 1st copy (in output) and put "*1" in
             // all other locations this replacement text WAS SUPPOSED have been :-(
@@ -218,7 +249,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                         continue outerloop;
                 } // inner for-loop
                 deepestNewPaths2bCreated.add ( tpl );
-                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): added new entry "+tpl +" making deepestNewPaths2bCreated's size ="+ deepestNewPaths2bCreated.size() +"]" );
+                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): added new entry "+tpl.key +" making deepestNewPaths2bCreated's size ="+ deepestNewPaths2bCreated.size() +"] for the newContent=/"+ tpl.val.toString() +"/" );
             }
         } // outer for-loop
         // going forward.. ignore this.newPaths2bCreated
@@ -233,16 +264,16 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             final LinkedHashMap<String, Object> lowestmap = tpl.val;
             final String prefix = yp.getPrefix();
             final String suffix = yp.getSuffix();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): about to add the NEW path ["+ suffix +"]" );
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): about to.. add the NEW path ["+ suffix +"]" );
             Object prevchildelem = this.newData2bInserted;
             for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
                 // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
                 final LinkedHashMap<String, Object> newelem = new LinkedHashMap<>();
                 newelem.put ( yp.yamlElemArr[ix], prevchildelem );
                 prevchildelem = newelem;
-                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newelem= ["+ newelem.toString() +"]" );
+                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): added the NEW path @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newelem= ["+ newelem.toString() +"]" );
             }
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): Adding the final MISSING Path-elem @ ["+ yp.index() +"]" );
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): Adding the final MISSING Path-elem @ ["+ yp.index() +"] = ["+ yp.yamlElemArr[ yp.index() ] +"]" );
             if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): parent Map = ["+ lowestmap.toString() +"]" );
             lowestmap.put(  yp.yamlElemArr[ yp.index() ],  prevchildelem );
         }
