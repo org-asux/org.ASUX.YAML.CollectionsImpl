@@ -249,22 +249,36 @@ public class AWSSDK {
             // String s = zone.toString().replaceAll("=",":");
             // above zone.toString returns INVALID JSON.. that causes problems elsewhere.. when loading these strings.
             // So, manually have to create JSON here.
-            String s = "{ ";
-            s+= "ZoneName: '"+ zone.getZoneName()   +"',";
-            s+= "ZoneId: '"  + zone.getZoneId()     +"',";
-            s+= "State: '"   + zone.getState()      +"',";
-            s+= "RegionName: '"+ zone.getRegionName() +"',";
-            String sm = "";
-            for( AvailabilityZoneMessage azm: zone.getMessages() ) {
-                if (   !   sm.equals("") ) sm += ",";
-                s += "'"+ azm.getMessage() + "'";
-            }
-            s+= "Messages: [" + sm + "] }";
+            // String s = "{ ";
+            // s+= "ZoneName: '"+ zone.getZoneName()   +"',";
+            // s+= "ZoneId: '"  + zone.getZoneId()     +"',";
+            // s+= "State: '"   + zone.getState()      +"',";
+            // s+= "RegionName: '"+ zone.getRegionName() +"',";
+            // String sm = "";
+            // for( AvailabilityZoneMessage azm: zone.getMessages() ) {
+            //     if (   !   sm.equals("") ) sm += ",";
+            //     s += "'"+ azm.getMessage() + "'";
+            // }
+            // s+= "Messages: [" + sm + "] }";
+            // if ( this.verbose ) System.out.println( CLASSNAME +": describeAZs(): aws ec2 describe-az command output corrected to be JSON-compatible as ["+ s +"]" );
+            // final LinkedHashMap<String,Object> map = new Tools(this.verbose).JSONString2YAML( s );
+            // if ( this.verbose ) System.out.println( map.toString() );
+            // retarr.add( map );
 
-            if ( this.verbose ) System.out.println( CLASSNAME +": describeAZs(): aws ec2 describe-az command output corrected to be JSON-compatible as ["+ s +"]" );
-            final LinkedHashMap<String,Object> map = new Tools(this.verbose).JSONString2YAML( s );
-            if ( this.verbose ) System.out.println( map.toString() );
-            retarr.add( map );
+            final LinkedHashMap<String,Object> oneZone = new LinkedHashMap<>();
+            oneZone.put( "ZoneName",    zone.getZoneName() );
+            oneZone.put( "ZoneId",      zone.getZoneId() );
+            oneZone.put( "State",       zone.getState() );
+            oneZone.put( "RegionName",  zone.getRegionName() );
+            final ArrayList<String> sm = new ArrayList<>();
+            for( AvailabilityZoneMessage azm: zone.getMessages() ) {
+                sm.add( azm.getMessage() );
+            }
+            oneZone.put( "Messages", sm );
+            if ( this.verbose ) System.out.println( CLASSNAME +": describeAZs(): aws ec2 describe-az command output in JSON-compatible form is ["+ oneZone.toString() +"]" );
+
+            retarr.add( oneZone );
+
         }
         return retarr;
     }
