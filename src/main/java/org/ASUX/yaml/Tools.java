@@ -53,6 +53,11 @@ import static org.junit.Assert.*;
  */
 public class Tools {
 
+    public static final String ASUXKEYWORDFORWRAPPER = "ASUX.output.";
+    public static final String ARRAYWRAPPED = ASUXKEYWORDFORWRAPPER+"array";
+    public static final String LISTWRAPPED = ASUXKEYWORDFORWRAPPER+"list";
+    public static final String SINGLESTRINGWRAPPED = ASUXKEYWORDFORWRAPPER+"singleString";
+
     public static final String CLASSNAME = "org.ASUX.yaml.Tools";
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
@@ -88,6 +93,7 @@ public class Tools {
         public String toString() { return this.key.toString() +"="+ this.val.toString(); }
     }
 
+    //==============================================================================
     public ArrayList< Tools.Tuple< String,String > >      getKVPairs( final Object _o ) {
         ArrayList< Tools.Tuple< String,String > > kvpairs = new ArrayList<>();
         final OutputObjectTypes typ = this.getOutputObjectType( _o );
@@ -100,6 +106,47 @@ public class Tools {
             kvpairs.add( new Tools.Tuple< String,String>(k, map.get(k).toString() ) );
         }
         return kvpairs; //unless o is an empty Map, this will have something in it.
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    /**
+     * Given a string, if it's 1st character and last character are BOTH single-quote.. remove them.  Similarly for DOUBLE-quote.
+     * @param s any string
+     * @return string - after removing the beginning and ending quotes
+     */
+    public String removeBeginEndQuotes( final String s ) {
+        if ( s.startsWith("'") && s.endsWith("'") ) {
+            if (this.verbose) System.out.println( CLASSNAME +": removeBeginEndQuotes(): before stripped single-quote =["+ s + "]" );
+            final String ss = s.substring( 1, s.length()-1 );
+            if (this.verbose) System.out.println( CLASSNAME +": removeBeginEndQuotes(): stripped of single-quote =["+ ss + "]" );
+            return ss;
+        } else if ( s.startsWith("\"") && s.endsWith("\"") ) {
+            if (this.verbose) System.out.println( CLASSNAME +": removeBeginEndQuotes(): before stripped DOUBLE-quote =["+ s + "]" );
+            final String ss = s.substring( 1, s.length()-1 );
+            if (this.verbose) System.out.println( CLASSNAME +": removeBeginEndQuotes(): stripped of DOUBLE-quote =["+ ss + "]" );
+            return ss;
+        } else {
+            return s;
+        }
+    }
+
+    /**
+     * Given aan array of string, for each element .. check if it's 1st character and last character are BOTH single-quote.. remove them.  Similarly for DOUBLE-quote.
+     * If any array-element has such beginning and end matching quotes, remove those.
+     * @param s any string
+     * @return string[] with updated string values in same order.
+     */
+    public String[] removeBeginEndQuotes( final String[] _basicStrArray )
+    {
+        final ArrayList<String> arr = new ArrayList<>();
+        for ( int ix=0; ix < _basicStrArray.length; ix++ ) {
+            final String s = removeBeginEndQuotes ( _basicStrArray[ix] );
+            arr.add( s );
+        } // for
+        return arr.toArray( _basicStrArray ); // (new String[]());
     }
 
     //==============================================================================
@@ -293,42 +340,36 @@ public class Tools {
      *  Takes any STRING-form JSON as input - it better be valid JSON - and reads it back as YAML/LinkedHashMap.
      *  I need such a function, as I learned the hard way that libraries do NOT work 100% well.  Only file-formats are the workaorund/ way out.
      *  I definitely "fgool-proof" method to ensure 'valid' YAML, for error-free processing by the entire org.ASUX.yaml library to work without any issues
-     *  @param _jsonString a java.lang.String object
+     *  @param _yamlString a java.lang.String object
      *  @param _bWrapScalar true or false.  If the returne value is going to be a SCALAR, do you want it wrapped into a LinkedHashMap or throw instead?
      *  @return a java.util.LinkedHashMap&lt;String, Object&gt; object that's definitely "kosher" for the entire org.ASUX.yaml library to work without any issues
      * @throws com.esotericsoftware.yamlbeans.YamlException if unable to convert into LinkedHashMap per com.esotericsoftware.yamlbeans library
      * @throws java.io.IOException if any error using java.io.StringReader and java.io.StringWriter
      * @throws Exception any other run-time exception, while parsing large Strings, nullpointers, etc.. ..
      */
-    public LinkedHashMap<String, Object>  YAMLString2YAML( final String  _jsonString, final boolean _bWrapScalar )
+    public LinkedHashMap<String, Object>  YAMLString2YAML( final String  _yamlString, final boolean _bWrapScalar )
                     throws com.esotericsoftware.yamlbeans.YamlException, java.io.IOException, Exception
     {
-        String wellFormedJSONString = _jsonString;
-        if ( _jsonString.contains("=") && ! _jsonString.contains(":") ) {
-            // WEll! it means the entire string in Key=Value format.   Not in proper Key:Value JSON format.
-            wellFormedJSONString = _jsonString.replaceAll("=", ": "); // fingers crossed. I hope this works.
-        } else {
-            wellFormedJSONString = _jsonString.replaceAll(":", ": "); // Many libraries do NOT like  'key:value'.  They want a blank after colon like 'key: value'
-        }
-        if ( this.verbose ) System.out.println(">>>>>>>>>>>>>>>>>>>> "+ CLASSNAME+": YAMLString2YAML(): "+ wellFormedJSONString);
+        if ( this.verbose ) System.out.println(">>>>>>>>>>>>>>>>>>>> "+ CLASSNAME+": YAMLString2YAML(): "+ _yamlString);
 
         try {
-            final java.io.Reader reader3 = new java.io.StringReader( wellFormedJSONString );
+            final java.io.Reader reader3 = new java.io.StringReader( _yamlString );
             @SuppressWarnings("unchecked")
             final LinkedHashMap<String, Object> tempMap = new com.esotericsoftware.yamlbeans.YamlReader(reader3).read(LinkedHashMap.class);
             reader3.close();
-            if ( this.verbose ) System.out.println( CLASSNAME + ": YAMLString2YAML(): created new Map [" + tempMap.toString() +"]" );
+            if ( this.verbose ) System.out.println( CLASSNAME + ": YAMLString2YAML(): created new Map = " + tempMap.toString() +" " );
 
             return tempMap;
+
         } catch (com.esotericsoftware.yamlbeans.YamlReader.YamlReaderException e) {
             // com.esotericsoftware.yamlbeans.YamlReader$YamlReaderException: Line 0, column 10: Expected data for a java.util.LinkedHashMap field but found: scalar
             if (this.verbose) System.out.println( CLASSNAME+": YAMLString2YAML(): Hmmm.. Just a string?? passed as parameter??");
             // if ( e.getMessage().contains("Expected data for a java.util.LinkedHashMap field but found: scalar"))
             if ( e.getMessage().contains("but found: scalar") && _bWrapScalar )
-                return this.wrapAnObject_intoLinkedHashMap( _jsonString );
+                return this.wrapAnObject_intoLinkedHashMap( _yamlString );
             else {
                 if ( this.verbose ) e.printStackTrace(System.err);
-                if ( this.verbose ) System.err.println( CLASSNAME+": YAMLString2YAML(): Input String ["+ _jsonString +"] does Not seem to be YAML - nor - a simple SCALAR string" );
+                if ( this.verbose ) System.err.println( CLASSNAME+": YAMLString2YAML(): Input String ["+ _yamlString +"] does Not seem to be YAML - nor - a simple SCALAR string" );
                 throw e;
             }
         }
@@ -338,18 +379,13 @@ public class Tools {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    public static final String ASUXKEYWORDFORWRAPPER = "ASUX.output.";
-    public static final String ARRAYWRAPPED = ASUXKEYWORDFORWRAPPER+"array";
-    public static final String LISTWRAPPED = ASUXKEYWORDFORWRAPPER+"list";
-    public static final String SINGLESTRINGWRAPPED = ASUXKEYWORDFORWRAPPER+"singleString";
-
     public LinkedHashMap<String, Object> wrapAnObject_intoLinkedHashMap( final Object _output ) throws Exception
     {
         // do NOT MAKE the mistake of using a SWITCH statement using 'typ' below.
         // final Tools.OutputObjectTypes typ = this.getOutputObjectType( _o );
         // switch( typ )  <<---- do Not do this!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-// UNKNOWN: What if code BELOW in this function.. unknowingly wraps an already wrapped object??????????????
+// UNKNOWN: What if .. the code BELOW, in this function.. unknowingly wraps an already wrapped object??????????????
 
         if ( _output instanceof String ) {
             @SuppressWarnings("unchecked")
@@ -431,6 +467,10 @@ public class Tools {
             } else {
                 // assert:   map.keySet().size() == 1 exactly
                 final String k = map.keySet().iterator().next();
+                if ( this.verbose ) System.out.println( CLASSNAME +": getOutputObjectType(): A single-key LinkedHashMap with k=["+ k +"]" );
+                if ( ( ! ARRAYWRAPPED.equals(k))  &&  (  ! LISTWRAPPED.equals(k)) )
+                    return OutputObjectTypes.Type_LinkedHashMap;
+
                 final Object o1 = map.get(k);
                 if ( o1 instanceof String ) return  OutputObjectTypes.Type_String;
                 if ( o1 instanceof ArrayList ) return  OutputObjectTypes.Type_ArrayList;
