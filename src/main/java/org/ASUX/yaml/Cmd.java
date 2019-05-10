@@ -403,6 +403,7 @@ public class Cmd {
             final String srcFile = _src.substring(1);
             final InputStream fs = new FileInputStream( srcFile );
             if ( srcFile.endsWith(".json") ) {
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a JSON-file provided via '@'." );
                 //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
                 // final LinkedHashMap<String, Object> retMap2 = ..
                 // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
@@ -418,8 +419,8 @@ public class Cmd {
                 retMap2 = tools.lintRemover( retMap2 );
                 fs.close();
                 return retMap2;
-            }
-            if ( srcFile.endsWith(".yaml") ) {
+            } else if ( srcFile.endsWith(".yaml") ) {
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a YAML-file provided via '@'." );
                 final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
                 final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
                 @SuppressWarnings("unchecked")
@@ -427,10 +428,13 @@ public class Cmd {
                 reader1.close(); // automatically includes fs.close();
                 if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + retMap3 );
                 return retMap3;
+            } else {
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
+                return null;
             }
-            return null; // compiler is complaining about missing return statement.
 
         } else if ( _src.startsWith("!") ) {
+            if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting Recall-from-memory via '!'." );
             final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
             // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
             final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
@@ -438,6 +442,7 @@ public class Cmd {
             return recalledContent;
 
         } else {
+            if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): Must be an inline String.  Let me see if it's inline-JSON or inline-YAML." );
             try{
                 // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
                 // and less likely to see a YAML string inline
@@ -475,6 +480,7 @@ public class Cmd {
         final Tools tools = new Tools(this.verbose);
         if ( _dest != null ) {
             if ( _dest.startsWith("@") ) {
+                if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
                 final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
                 final InputStream fs = new FileInputStream( destFile );
                 if ( destFile.endsWith(".json") ) {
@@ -491,6 +497,7 @@ public class Cmd {
                     if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.Map2JSONString(_inputMap) );
                     return;
                 } else if ( destFile.endsWith(".yaml") ) {
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
                     final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
                             = new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter( destFile ) );
                     yamlwriter.write( _inputMap );
@@ -498,10 +505,13 @@ public class Cmd {
                     fs.close();
                     if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.Map2YAMLString(_inputMap) );
                     return;
+                } else {
+                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
+                    throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
                 }
-                return;
             } else {
                 // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
+                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _dest +"): detecting Save-To-memory via '!' (if '!' is not specified, it's implied)." );
                 final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
                 if ( this.memoryAndContext != null ) {
                     // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
