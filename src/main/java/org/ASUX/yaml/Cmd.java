@@ -32,6 +32,10 @@
 
 package org.ASUX.yaml;
 
+import org.ASUX.common.Tuple;
+import org.ASUX.common.Output;
+import org.ASUX.common.Debug;
+
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -48,13 +52,15 @@ import java.util.Properties;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import com.esotericsoftware.yamlbeans.YamlException;
+import com.esotericsoftware.yamlbeans.YamlReader;
+import com.esotericsoftware.yamlbeans.YamlWriter;
+
 /**
  * <p>
  * This org.ASUX.yaml GitHub.com project and the
  * <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a>
- * GitHub.com projects, would simply NOT be possible without the genius Java
- * library <a href=
- * "https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+ * GitHub.com projects.
  * </p>
  * <p>
  * This class is the "wrapper-processor" for the various "YAML-commands" (which
@@ -89,7 +95,7 @@ public class Cmd {
 
     public static final String CLASSNAME = "org.ASUX.yaml.Cmd";
 
-    private static final String TMPFILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
+    // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
 
     /**
      * <p>Whether you want deluge of debug-output onto System.out.</p>
@@ -150,6 +156,7 @@ public class Cmd {
     public static void main( String[] args ) {
 
         CmdLineArgs cmdLineArgs = null;
+        final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
             cmdLineArgs = new CmdLineArgs( args );
@@ -160,10 +167,19 @@ public class Cmd {
             if (cmdLineArgs.verbose) System.out.println(CLASSNAME + ": about to load file: " + cmdLineArgs.inputFilePath);
             final java.io.InputStream is1 = ( cmdLineArgs.inputFilePath.equals("-") ) ? System.in
                     : new java.io.FileInputStream(cmdLineArgs.inputFilePath);
-            final java.io.Reader reader1 = new java.io.InputStreamReader(is1);
+            final java.io.Reader filereader = new java.io.InputStreamReader(is1);
 
             // -----------------------
-            com.esotericsoftware.yamlbeans.YamlWriter writer = null;
+            // Leverage the wonderful appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
+            final YamlReader reader = new YamlReader( filereader );
+            Tools.defaultConfigurationForYamlReader( reader, cmd );
+            final LinkedHashMap dataObj = reader.read( LinkedHashMap.class ); // LinkedHashMap.class );
+            @SuppressWarnings("unchecked")
+            final LinkedHashMap<String, Object> data = (LinkedHashMap<String, Object>) dataObj;
+            filereader.close();
+
+            // -----------------------
+            YamlWriter writer = null;
 
             // -----------------------
             // post completion of YAML processing
@@ -182,18 +198,11 @@ public class Cmd {
 
             // prepare for output: whether it goes to System.out -or- to an actual output-file.
             writer = ( cmdLineArgs.outputFilePath.equals("-") )
-                    ? new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(TMPFILE) )
-                    : new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
-            // WARNING!!! com.esotericsoftware.yamlbeans.YamlWriter takes over stdout, and it will STOP working for all System.out.println();
+                    ? new YamlWriter( stdoutSurrogate ) // new java.io.FileWriter(TMP FILE)
+                    : new YamlWriter( new java.io.FileWriter(cmdLineArgs.outputFilePath) );
+            // WARNING!!! YamlWriter takes over stdout, and it will STOP working for all System.out.println();
 
-            Tools.defaultConfigurationForYamlWriter( writer );
-
-            // -----------------------
-            // Leverage the wonderful com.esotericsoftware.yamlbeans library to load file-contents into a java.util.LinkedHashMap<String, Object>
-            final LinkedHashMap dataObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
-            @SuppressWarnings("unchecked")
-            final LinkedHashMap<String, Object> data = (LinkedHashMap<String, Object>) dataObj;
-            reader1.close();
+            Tools.defaultConfigurationForYamlWriter( writer ); // , cmdLineArgs.quoteType
 
             //======================================================================
             // run the command requested by user
@@ -241,27 +250,30 @@ public class Cmd {
             } else {
                 if (writer != null) writer.close(); // close the actual file.
             }
+            stdoutSurrogate.flush();
 
             // Now since we have a surrogate for STDOUT for use by , let's dump its output onto STDOUT!
             if ( cmdLineArgs.outputFilePath.equals("-") ) {
+                final String outputStr = stdoutSurrogate.toString();
                 try {
-                    final java.io.InputStream istrm = new java.io.FileInputStream( TMPFILE );
-                    final java.util.Scanner scanner = new java.util.Scanner( istrm );
+                    // final java.io.InputStream istrm = new java.io.FileInputStream( TMP FILE );
+                    final java.io.Reader reader6 = new java.io.StringReader( outputStr );
+                    final java.util.Scanner scanner = new java.util.Scanner( reader6 );
                     while (scanner.hasNextLine()) {
                         System.out.println( scanner.nextLine() );
                     }
-                } catch (java.io.IOException e) {
-                    e.printStackTrace(System.err);
-                    System.err.println( CLASSNAME + ": openBatchFile(): Failure to dump contents of file ["+ TMPFILE +"]" );
-                    System.exit(102);
+                // } catch (java.io.IOException e) {
+                //     e.printStackTrace(System.err);
+                //     System.err.println( CLASSNAME + ": openBatchFile(): Failure to read Command-output contents ["+ outputStr +"]" );
+                //     System.exit(102);
                 } catch (Exception e) {
                     e.printStackTrace(System.err);
-                    System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error: re: ."+ TMPFILE );
+                    System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error: re: Command-output contents ["+ outputStr +"]" );
                     System.exit(103);
                 }
             }
 
-        } catch (com.esotericsoftware.yamlbeans.YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
+        } catch (YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
             e.printStackTrace(System.err);
             System.err.println( "Internal error: unable to process YAML");
             System.exit(9);
@@ -294,14 +306,14 @@ public class Cmd {
      *  @param _data _the YAML data that is the input to pretty much all commands (a java.utils.LinkedHashMap&lt;String, Object&gt; object).
      *  @return either a String, java.utils.LinkedHashMap&lt;String, Object&gt;
      *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
-     *  @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     *  @throws YamlException Any issue reading and parsing the YAML, per the appropriate YAML library
      *  @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public Object processCommand ( CmdLineArgs _cmdLineArgs, final LinkedHashMap<String, Object> _data )
                 throws FileNotFoundException, IOException, Exception,
-                YAMLPath.YAMLPathException, com.esotericsoftware.yamlbeans.YamlException
+                YAMLPath.YAMLPathException, YamlException
     {
         if ( _cmdLineArgs.isReadCmd ) {
             ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
@@ -335,7 +347,7 @@ public class Cmd {
             // Within a Batch-YAML context, the output of the previous line does NOT have to be a LinkedHashMap.
             // In such a case, an ArrayList or LinkedList object is converted into one -- by Tools.wrapAnObject_intoLinkedHashMap().
             // So, we will use the inverse-function Tools.getTheActualObject() to undo that.
-            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, new Tools(this.verbose).getTheActualObject( newContent ) );
+            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, new Output(this.verbose).getTheActualObject( newContent ) );
             inscmd.searchYamlForPattern( _data, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             return _data;
 
@@ -350,9 +362,13 @@ public class Cmd {
         } else if ( _cmdLineArgs.isMacroCmd ) {
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             final Properties properties = new Properties();
-            if (_cmdLineArgs.propertiesFilePath != null) {
-                java.io.InputStream input = new java.io.FileInputStream( _cmdLineArgs.propertiesFilePath );
+            assert( _cmdLineArgs.propertiesFilePath != null );
+            if ( _cmdLineArgs.propertiesFilePath.startsWith("@") ) {
+                final java.io.InputStream input = new java.io.FileInputStream( _cmdLineArgs.propertiesFilePath.substring(1) );
                 properties.load( input );
+            } else {
+                final java.io.StringReader sr = new java.io.StringReader( _cmdLineArgs.propertiesFilePath );
+                properties.load( sr );
             }
             if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + _cmdLineArgs.propertiesFilePath + "]");
             MacroYamlProcessor macro = new MacroYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
@@ -387,13 +403,13 @@ public class Cmd {
      * This functon takes a single parameter that is a javalang.String value - and, either detects it to be inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to something saved in {@link MemoryAndContext} within a Batch-file execution (must be prefixed with a '!')
      * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
      * @return an object (either LinkedHashMap, ArrayList or LinkedList)
-     * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     * @throws YamlException any issue reading and parsing the YAML per the appropriate YAML library
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public Object getDataFromReference( final String _src  )
-                throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
+                throws FileNotFoundException, IOException, Exception, YamlException
     {
         if ( _src == null || _src.trim().length() <= 0 )
             return null;
@@ -414,7 +430,7 @@ public class Cmd {
                 objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
                     com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
                 LinkedHashMap<String, Object> retMap2 = null;
-                retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String,Object>>(){}  );
+                retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference< LinkedHashMap<String,Object> >(){}  );
                 if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
                 retMap2 = tools.lintRemover( retMap2 );
                 fs.close();
@@ -422,7 +438,7 @@ public class Cmd {
             } else if ( srcFile.endsWith(".yaml") ) {
                 if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a YAML-file provided via '@'." );
                 final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
-                final LinkedHashMap mapObj = new com.esotericsoftware.yamlbeans.YamlReader( reader1 ).read( LinkedHashMap.class );
+                final LinkedHashMap mapObj = new YamlReader( reader1 ).read( LinkedHashMap.class );
                 @SuppressWarnings("unchecked")
                 final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
                 reader1.close(); // automatically includes fs.close();
@@ -469,13 +485,13 @@ public class Cmd {
      * This function saved _inputMap to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
      * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
      * @param _inputMap the object to be saved using the reference provided in _dest paramater
-     * @throws com.esotericsoftware.yamlbeans.YamlException you'll need to refer to the library at <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.
+     * @throws YamlException any issue reading and parsing the YAML per the appropriate YAML library
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public void saveDataIntoReference( final String _dest, final LinkedHashMap<String, Object> _inputMap )
-                throws FileNotFoundException, IOException, Exception, com.esotericsoftware.yamlbeans.YamlException
+                throws FileNotFoundException, IOException, Exception, YamlException
     {
         final Tools tools = new Tools(this.verbose);
         if ( _dest != null ) {
@@ -498,8 +514,8 @@ public class Cmd {
                     return;
                 } else if ( destFile.endsWith(".yaml") ) {
                     if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
-                    final com.esotericsoftware.yamlbeans.YamlWriter yamlwriter
-                            = new com.esotericsoftware.yamlbeans.YamlWriter( new java.io.FileWriter( destFile ) );
+                    final YamlWriter yamlwriter
+                            = new YamlWriter( new java.io.FileWriter( destFile ) );
                     yamlwriter.write( _inputMap );
                     yamlwriter.close();
                     fs.close();
