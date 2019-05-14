@@ -32,6 +32,9 @@
 
 package org.ASUX.yaml;
 
+import org.ASUX.common.Tuple;
+import org.ASUX.common.Output;
+
 // import java.util.Map;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
@@ -39,8 +42,7 @@ import java.util.LinkedHashMap;
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
- *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
- *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
  * @see org.ASUX.yaml.AbstractYamlEntryProcessor
  */
@@ -48,7 +50,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = "org.ASUX.yaml.DeleteYamlEntry";
 
-    protected final LinkedList< Tools.Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
+    protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
@@ -88,7 +90,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
             System.out.println("");
         }
 
-        this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
+        this.keys2bRemoved.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
         if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
@@ -112,7 +114,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
         if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): count=" + this.keys2bRemoved.size() );
-        for (Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
+        for (Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
             final String rhsStr = tpl.val.toString();
             if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
             tpl.val.remove(tpl.key);
