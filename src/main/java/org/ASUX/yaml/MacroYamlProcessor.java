@@ -40,9 +40,10 @@ import java.util.Properties;
 
 import java.util.regex.*;
 
+import com.esotericsoftware.yamlbeans.YamlException;
+
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
- *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
- *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
  * @see org.ASUX.yaml.ReadYamlEntry
@@ -89,18 +90,18 @@ public class MacroYamlProcessor {
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p>Note: this function expects you to pass in a 'new java.utils.LinkedHashMap&lt;String, Object&gt;()' as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _inpMap and _outMap will be identical when function returns</p>
-     *  @param _inpMap A java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _inpMap A java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _outpMap Pass in a new 'empty' java.utils.LinkedHashMap&lt;String, Object&gt;().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
-     *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+     *  @throws YamlException any issue reading and parsing the YAML per the appropriate YAML library
 	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
      */
     public boolean recursiveSearch(
             final LinkedHashMap<String, Object> _inpMap,
 			final LinkedHashMap<String,Object> _outpMap,
 			final Properties _props
-    ) throws com.esotericsoftware.yamlbeans.YamlException, MacroYamlProcessor.MacroException {
+    ) throws YamlException, MacroYamlProcessor.MacroException {
 
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
 
@@ -114,11 +115,12 @@ public class MacroYamlProcessor {
             assert( key != null );
 
             // Note: the lookup within _inpMap .. uses keyAsIs.  Not key.
-            final Object rhsObj = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
-            final String rhsStr = rhsObj.toString(); // to make verbose logging code simplified
+			final Object rhsObj = _inpMap.get(keyAsIs);  // otherwise we'll inefficiently be doing _inpMap.get multiple times below.
 
+			final String rhsStr = (rhsObj==null)?"null":rhsObj.toString(); // to make verbose logging code simplified
             if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursiveSearch(): recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
 
+			if ( rhsObj == null ) continue; // perhaps the YAML line is simply key-only like..    Key:
 			//--------------------------------------------------------
 			// So.. we need to keep recursing (specifically for LinkedHashMap<String, Object> & ArrayList YAML elements)
 			if ( rhsObj instanceof LinkedHashMap ) {
@@ -157,9 +159,7 @@ public class MacroYamlProcessor {
 				} // for Object o: arr
 
 				_outpMap.put( key, newarr );
-				// Why am I not simply doing:-       _outpMap.put( key, newarr )
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
-				// tool.addMapEntry( _outpMap, key, newarr );
 
 			} else if ( rhsObj instanceof java.lang.String ) {
 				// by rhsObj.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
@@ -167,12 +167,10 @@ public class MacroYamlProcessor {
 				final String news = evaluateMacros( asis, _props);
 				if (   !    asis.equals(news) ) this.changesMade ++;
 				_outpMap.put( key, news );
-				// Why am I not simply doing:-       _outpMap.put( key, newarr )
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
-				// tool.addStringEntry( _outpMap, key, s );
 
             } else {
-				System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #2: failure w Type '"+ rhsObj.getClass().getName() +"'");
+				System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #2: failure w Type '"+ ((rhsObj==null)?"null":rhsObj.getClass().getName()) +"'");
 				System.exit(93); // This is a serious failure. Shouldn't be happening.
             }// if-else yamlPElemPatt.matcher()
 
@@ -247,7 +245,6 @@ public class MacroYamlProcessor {
 			final String s = "PatternSyntaxException when checking if '" + _s + "' matches pattern " + MacroYamlProcessor.pattStr;
 			System.err.println(CLASSNAME + ": evaluateMacros(): Unexpected Internal ERROR: " + s );
 			throw new MacroException( s );
-			// System.exit(91); // This is a serious failure. Shouldn't be happening.
 		}
 
 		// return _s; // program control should never get here.
