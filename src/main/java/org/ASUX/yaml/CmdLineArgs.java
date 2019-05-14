@@ -89,7 +89,7 @@ public class CmdLineArgs {
     public String yamlRegExpStr = "undefined";
 
     public String yamlPatternDelimiter = ".";
-    // public static com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
+    // public com.esotericsoftware.yamlbeans.YamlConfig.Quote quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** Constructor.
@@ -239,17 +239,17 @@ public class CmdLineArgs {
             this.propertiesFilePath = cmd.getOptionValue(MACROCMD);
             this.batchFilePath = cmd.getOptionValue(BATCHCMD);
 
-            // this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE; // default behavior
-            // if ( cmd.hasOption( noQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.NONE;
-            // if ( cmd.hasOption( singleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.SINGLEQUOTE;
-            // if ( cmd.hasOption( doubleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.QuoteCharEnum.DOUBLEQUOTE;
-            // System.err.println("this.quoteType = "+this.quoteType.toString());
+            // this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE; // default behavior
+            // if ( cmd.hasOption( noQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.NONE;
+            // if ( cmd.hasOption( singleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE;
+            // if ( cmd.hasOption( doubleQuoteOpt.getLongOpt()) ) this.quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.DOUBLE;
+            // if ( this.verbose ) System.out.println("this.quoteType = "+this.quoteType.toString());
 
             // System.err.println( CLASSNAME +": "+this.toString());
 
         } catch (ParseException e) {
             e.printStackTrace(System.err);
-            formatter.printHelp("java <jarL> com.esotericsoftware.yamlbeans.CmdLineArgs", options);
+            formatter.printHelp("java <jarL> org.ASUX.yaml.CmdLineArgs", options);
             throw e;
         }
     }
