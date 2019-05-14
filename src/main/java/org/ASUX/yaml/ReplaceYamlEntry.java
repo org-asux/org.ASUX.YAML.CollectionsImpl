@@ -32,6 +32,9 @@
 
 package org.ASUX.yaml;
 
+import org.ASUX.common.Tuple;
+import org.ASUX.common.Output;
+
 // import java.util.Map;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
@@ -39,8 +42,7 @@ import java.util.LinkedHashMap;
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
- *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
- *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
  * @see org.ASUX.yaml.AbstractYamlEntryProcessor
  */
@@ -49,7 +51,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     public static final String CLASSNAME = "org.ASUX.yaml.ReplaceYamlEntry";
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
-    protected final LinkedList< Tools.Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
+    protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
     // The above could have been a simpler LinkedList<String>.  But EFFICIENT-debugging-OUTPUT requires we also keep a copy of the Map object associated with each Key/String.
 
     protected Object replacementData = "?? huh.  Uninitialized this.replacementData ??";
@@ -61,7 +63,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _r this can be either a java.lang.String or a java.util.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans)
+     *  @param _r this can be either a java.lang.String or a java.util.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries)
      *  @throws java.lang.Exception - if the _r parameter is not as per above Spec
      */
     public ReplaceYamlEntry( final boolean _verbose, final boolean _showStats, Object _r ) throws Exception {
@@ -72,12 +74,14 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
         //     throw new Exception( CLASSNAME + ": Invalid _r parameter of type:" + _r.getClass().getName() + "'");
         // this.replacementData = _r;
 
-        final Tools tools = new Tools(this.verbose);
-        final Tools.OutputObjectTypes typ = tools.getOutputObjectType( _r );
-        Object o = tools.getTheActualObject( _r ); // perhaps the object is already wrapped (via a prior invocation of Tools.wrapAnObject_intoLinkedHashMap() )
+        final Output output = new Output(this.verbose);
+        final Tools tools = new Tools( this.verbose );
+        final Output.OutputType typ = output.getWrappedObjectType( _r );
+
+        Object o = output.getTheActualObject( _r ); // perhaps the object is already wrapped (via a prior invocation of output.wrapAnObject_intoLinkedHashMap() )
         if (this.verbose) System.out.println( CLASSNAME +": constructort(): provided ["+ _r.toString() +"].  I assume the actual object of type=["+ typ.toString() +"]=["+ o.toString() +"]" );
 
-        // for the following SWITCH-statement, keep an eye on Tools.OutputObjectTypes
+        // for the following SWITCH-statement, keep an eye on Output.OutputType
         switch( typ ) {
             case Type_ArrayList:
             case Type_LinkedList:
@@ -90,7 +94,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
                 // Convert Strings into YAML/JSON compatible LinkedHashMap .. incl. converting Key=Value  --> Key: Value
                 LinkedHashMap<String, Object> map = null; // let's determine if o is to be treated as a LinkedHashMap.. because user provided a JSON or YAML inline to the command line.
 
-                // IF-and-ONLY-IF _r is a simple-scalar-String, then this call will wrap the String by calling Tools.wrapAnObject_intoLinkedHashMap()
+                // IF-and-ONLY-IF _r is a simple-scalar-String, then this call will wrap the String by calling output.wrapAnObject_intoLinkedHashMap()
                 try{
                     // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
                     // and less likely to see a YAML string inline
@@ -108,7 +112,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
                 } // outer-try-catch
 
                 this.replacementData = (map != null)? map : s;
-                // if ( s.equals( tools.getTheActualObject(map).toString() ) )
+                // if ( s.equals( output.getTheActualObject(map).toString() ) )
                 //     o = s; // IF-and-ONLY-IF _r is a simple-scalar-String, then use it as-is.
                 break;
             case Type_KVPairs:
@@ -149,7 +153,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
         }
-        this.keys2bRemoved.add( new Tools.Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
+        this.keys2bRemoved.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
         if ( this.verbose ) System.out.println("onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
@@ -177,14 +181,15 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     {
 
         if ( this.verbose ) System.out.println("count=" + this.keys2bRemoved.size() );
-        for (Tools.Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
+        for (Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
             final String rhsStr = tpl.val.toString();
             if ( this.verbose ) System.out.println("atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
-            tpl.val.remove(tpl.key);
+
+            // tpl.val.remove(tpl.key);
 
             // Now put in a new entry - with the replacement data!
-            tpl.val.put( tpl.key, Tools.deepClone(this.replacementData) );
-            // If there are multiple matches.. then without Tools.deepclone, the com.esotericSoftware
+            tpl.val.put( tpl.key, org.ASUX.common.Utils.deepClone(this.replacementData) );
+            // If there are multiple matches.. then without deepClone(), the Eso teric Soft ware
             // YAML library, will use "&1" to define your 1st copy (in output) and put "*1" in
             // all other locations this replacement text WAS SUPPOSED have been :-(
         }
