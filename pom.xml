@@ -3,14 +3,14 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<name>yaml</name>
+	<name>${project.groupId}:${project.artifactId}</name>
 	<groupId>org.asux</groupId>
 	<artifactId>yaml</artifactId>
     
     <version>1.0</version>
     <inceptionYear>2019</inceptionYear>
     <description>Cmdline interface to process YAML files, leveraging the brilliantly robust gitbub project  github.com:esotericsoftware/yamlbeans.git (which is a Java object graphs, to and from YAML)</description>
-	<url>https://github.com/seetamraju/org.ASUX.yaml</url>
+	<url>https://github.com/org-asux/org.ASUX.yaml</url>
 
     <properties>
         <!-- Properties added here are globally useable -->
@@ -29,16 +29,32 @@
 
 	<licenses>
 		<license>
-			<name>New BSD License</name>
-			<url>http://www.opensource.org/licenses/bsd-license.php</url>
+			<name>BSD 3-Clause License</name>
+			<url>https://opensource.org/licenses/BSD-3-Clause</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
 
+    <developers>
+        <developer>
+            <name>Udaybhaskar Sarma Seetamraju</name>
+            <email>tosarma@gmail.com</email>
+            <organization>ASUX.org</organization>
+            <organizationUrl>https://ASUX.org</organizationUrl>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>0</timezone>
+        </developer>
+    </developers>
+
+	<contributors>
+	</contributors>
+
     <scm>
-		<url>scm:git:git@github.com:seetamraju/org.ASUX.yaml.git</url>
-		<connection>scm:git:git@github.com:seetamraju/org.ASUX.yaml.git</connection>
-		<developerConnection>scm:git:git@github.com:seetamraju/org.ASUX.yaml.git</developerConnection>
+		<url>http://github.com/org-asux/org.ASUX.yaml.git</url>
+		<connection>scm:git:git@github.com:org-asux/org.ASUX.yaml.git</connection>
+		<developerConnection>scm:git:git@github.com:org-asux/org.ASUX.yaml.git</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
 
@@ -56,11 +72,16 @@
 
 	<dependencies>
         <dependency>
+            <groupId>org.asux</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
             <!-- scope>test</scope -->
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.8.2</version>
-            </dependency>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
             <groupId>commons-cli</groupId>
@@ -221,19 +242,5 @@
         </plugins>
 
 	</build>
-
-    <developers>
-        <developer>
-            <name>Udaybhaskar Sarma Seetamraju</name>
-            <email>tosarma@gmail.com</email>
-            <roles>
-                <role>Developer</role>
-            </roles>
-            <timezone>0</timezone>
-        </developer>
-    </developers>
-
-	<contributors>
-	</contributors>
 
 </project>
