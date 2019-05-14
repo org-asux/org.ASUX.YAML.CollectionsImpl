@@ -235,7 +235,7 @@ public class AWSSDK {
      * Pass in a region-name and get back the output of the cmdline as JSON (cmdline being:- aws ec2 describe-availability-zones --region us-east-2 --profile ______ --output json)
      * @param _regionStr pass in valid AWS region names like 'us-east-2', 'us-west-1', 'ap-northeast-1' ..
      * @return An array of YAML-Maps.  Its exactly === cmdline output of: aws ec2 describe-availability-zones --region us-east-2 --profile ______ --output json
-     * @throws Exception could be one of com.esotericsoftware.yamlbeans.YamlException, java.io.IOException, or any runtime Exception
+     * @throws Exception any runtime Exception
      */
     public ArrayList< LinkedHashMap<String,Object> >  describeAZs( final String _regionStr ) throws Exception {
         final AmazonEC2 ec2 = this.getAWSEC2Hndl( _regionStr );
