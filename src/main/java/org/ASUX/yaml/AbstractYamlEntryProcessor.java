@@ -41,9 +41,10 @@ import java.util.regex.*;
 
 import static org.junit.Assert.*;
 
+import com.esotericsoftware.yamlbeans.YamlException;
+
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
- *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects, would
- *  simply NOT be possible without the genius Java library <a href="https://github.com/EsotericSoftware/yamlbeans">"com.esotericsoftware.yamlbeans"</a>.</p>
+ *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
  * @see org.ASUX.yaml.ReadYamlEntry
@@ -88,7 +89,7 @@ public abstract class AbstractYamlEntryProcessor {
      * <p>That full/end2end match will trigger the other function "onEnd2EndMatch()".</p>
      *
      * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      *  @param _key The value (typically a String) is what matched the _yamlPath.  Use it to get the "rhs" of the YAML element pointed to by _key
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
@@ -107,7 +108,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  Hence the choice of onEnd2EndMath() as the function name.</p>
      *
      * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the "bottom-most" YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".  This map could be potentially represent a simple YAML element like "name: petid"
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the "bottom-most" YAML SUB-tree (Note: Sub-tree) of the YAML file, as pointed to by "_yamlPath" and "_key".  This map could be potentially represent a simple YAML element like "name: petid"
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      *  @param _key The value (typically a String) is what matched the _yamlPath.  For "YAML Query", the "rhs" of the YAML element pointed to by _key is what you're looking for.  For "YAML Delete" or "YAML Replace", you do Not care about the "rhs".. just use the _key to remove the entry/replace the "rhs".
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
@@ -124,7 +125,7 @@ public abstract class AbstractYamlEntryProcessor {
      * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
      * <p>Note: Unlike the other abstract methods of this Abstract class, this does NOT have a return-value.</p>
      *
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file (as pointed to by "_yamlPath" and "_key") - representing where PathPattern match failed.  This map could be potentially represent a simple YAML element like "name: petid"
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the YAML SUB-tree (Note: Sub-tree) of the YAML file (as pointed to by "_yamlPath" and "_key") - representing where PathPattern match failed.  This map could be potentially represent a simple YAML element like "name: petid"
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      *  @param _key The value (typically a String) is what *FAILED* to match the _yamlPath.
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
@@ -139,7 +140,7 @@ public abstract class AbstractYamlEntryProcessor {
      *
      *  <p>You can fuck with the contents of any of the parameters passed, to your heart's content.</p>
      *
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
      *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
@@ -149,16 +150,16 @@ public abstract class AbstractYamlEntryProcessor {
 
     /** <p>Internal Note: This is <b>NOT NOT NOT NOT NOT</b> ........ a RECURSIVE-FUNCTION.</p>
      *  <p>This is a simple way to invoke the real-recursive function {@link #recursiveSearch}.</p>
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _yamlPathStr Example: "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _delim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      *  @return true = whether at least one match happened.
      *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
-     *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+     *  @throws YamlException - this is thrown by the YAMLReader classes from various libraries
      *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean searchYamlForPattern(LinkedHashMap<String, Object> _map, String _yamlPathStr, final String _delim)
-                throws YAMLPath.YAMLPathException, com.esotericsoftware.yamlbeans.YamlException, Exception
+                throws YAMLPath.YAMLPathException, YamlException, Exception
     {
         final LinkedList<String> end2EndPaths = new LinkedList<>();
         this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
@@ -196,16 +197,16 @@ public abstract class AbstractYamlEntryProcessor {
      *  <p><b>Don't tell me I did NOT warn you!</b>  Use the {@link searchYamlForPattern} function instead.</p>
      *  <p>This function returns true, if the invocation (or it's recursion) did find a match (partial or end2end).<br>
      *  For now, I'm Not using the return value ANYWHERE.   Either I will - or - will refactor the return as Void.</p>
-     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by com.esotericsoftware.yamlbeans library) containing the entire Tree representing the YAML file.
+     *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _yamlPath This is the {@link YAMLPath} class consstructed using example strings like "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This string is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return true = whether at least one match happened.
-     *  @throws com.esotericsoftware.yamlbeans.YamlException - this is thrown by the library com.esotericsoftware.yamlbeans
+     *  @throws YamlException - this is thrown by the  YAMLReader classes from various libraries
      *  @throws java.util.regex.PatternSyntaxException - this is thrown the innocuous String.match(regexp)
      *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean recursiveSearch(LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final LinkedList<String> _end2EndPaths )
-                    throws com.esotericsoftware.yamlbeans.YamlException, java.util.regex.PatternSyntaxException, Exception
+                    throws YamlException, java.util.regex.PatternSyntaxException, Exception
     {
         if ( (_map==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
         if (  ! _yamlPath.isValid ) return false;
