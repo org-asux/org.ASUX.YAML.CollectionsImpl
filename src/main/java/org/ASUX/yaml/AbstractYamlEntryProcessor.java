@@ -41,8 +41,6 @@ import java.util.regex.*;
 
 import static org.junit.Assert.*;
 
-import com.esotericsoftware.yamlbeans.YamlException;
-
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
@@ -155,11 +153,10 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _delim pass in a value like '.'  '\t'   ','   .. such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      *  @return true = whether at least one match happened.
      *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
-     *  @throws YamlException - this is thrown by the YAMLReader classes from various libraries
      *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean searchYamlForPattern(LinkedHashMap<String, Object> _map, String _yamlPathStr, final String _delim)
-                throws YAMLPath.YAMLPathException, YamlException, Exception
+                throws YAMLPath.YAMLPathException, Exception
     {
         final LinkedList<String> end2EndPaths = new LinkedList<>();
         this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
@@ -201,12 +198,11 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _yamlPath This is the {@link YAMLPath} class consstructed using example strings like "<code>paths.*.*.responses.200</code>" - <b>ATTENTION: This string is a human readable pattern, NOT a proper RegExp-pattern</b>
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return true = whether at least one match happened.
-     *  @throws YamlException - this is thrown by the  YAMLReader classes from various libraries
      *  @throws java.util.regex.PatternSyntaxException - this is thrown the innocuous String.match(regexp)
      *  @throws Exception any errors/troubles noted from within the subclasses, especially TableCmdProcessor.java
      */
     public boolean recursiveSearch(LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final LinkedList<String> _end2EndPaths )
-                    throws YamlException, java.util.regex.PatternSyntaxException, Exception
+                    throws java.util.regex.PatternSyntaxException, Exception
     {
         if ( (_map==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
         if (  ! _yamlPath.isValid ) return false;
