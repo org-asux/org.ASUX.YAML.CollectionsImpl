@@ -35,7 +35,6 @@ package org.ASUX.yaml;
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output;
 
-// import java.util.Map;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
 
@@ -72,54 +71,54 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
             throw new Exception( CLASSNAME + ": _r parameter is Null");
         // if ( ! (_r instanceof java.lang.String) && ! (_r instanceof java.util.LinkedHashMap ) )
         //     throw new Exception( CLASSNAME + ": Invalid _r parameter of type:" + _r.getClass().getName() + "'");
-        // this.replacementData = _r;
+        this.replacementData = _r;
 
-        final Output output = new Output(this.verbose);
-        final Tools tools = new Tools( this.verbose );
-        final Output.OutputType typ = output.getWrappedObjectType( _r );
+        // final Output output = new Output(this.verbose);
+        // final Tools tools = new Tools( this.verbose );
+        // final Output.OutputType typ = output.getWrappedObjectType( _r );
 
-        Object o = output.getTheActualObject( _r ); // perhaps the object is already wrapped (via a prior invocation of output.wrapAnObject_intoLinkedHashMap() )
-        if (this.verbose) System.out.println( CLASSNAME +": constructort(): provided ["+ _r.toString() +"].  I assume the actual object of type=["+ typ.toString() +"]=["+ o.toString() +"]" );
+        // Object o = output.getTheActualObject( _r ); // perhaps the object is already wrapped (via a prior invocation of output.wrapAnObject_intoLinkedHashMap() )
+        // if (this.verbose) System.out.println( CLASSNAME +": constructort(): provided ["+ _r.toString() +"].  I assume the actual object of type=["+ typ.toString() +"]=["+ o.toString() +"]" );
 
-        // for the following SWITCH-statement, keep an eye on Output.OutputType
-        switch( typ ) {
-            case Type_ArrayList:
-            case Type_LinkedList:
-            case Type_LinkedHashMap:
-                // Do Nothing
-                this.replacementData = _r;
-                break;
-            case Type_String:
-                final String s = o.toString();
-                // Convert Strings into YAML/JSON compatible LinkedHashMap .. incl. converting Key=Value  --> Key: Value
-                LinkedHashMap<String, Object> map = null; // let's determine if o is to be treated as a LinkedHashMap.. because user provided a JSON or YAML inline to the command line.
+        // // for the following SWITCH-statement, keep an eye on Output.OutputType
+        // switch( typ ) {
+        //     case Type_ArrayList:
+        //     case Type_LinkedList:
+        //     case Type_LinkedHashMap:
+        //         // Do Nothing
+        //         this.replacementData = _r;
+        //         break;
+        //     case Type_String:
+        //         final String s = o.toString();
+        //         // Convert Strings into YAML/JSON compatible LinkedHashMap .. incl. converting Key=Value  --> Key: Value
+        //         LinkedHashMap<String, Object> map = null; // let's determine if o is to be treated as a LinkedHashMap.. because user provided a JSON or YAML inline to the command line.
 
-                // IF-and-ONLY-IF _r is a simple-scalar-String, then this call will wrap the String by calling output.wrapAnObject_intoLinkedHashMap()
-                try{
-                    // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-                    // and less likely to see a YAML string inline
-                    map = tools.JSONString2YAML( s );
-                } catch( Exception e ) {
-                    if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as JSON." );
-                    try {
-                        // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-                        // and less likely to see a YAML string inline
-                        map = tools.YAMLString2YAML( s, false );  // 2nd parameter is 'bWrapScalar' === false;.  if 's' turns out to be scalar at this point.. I want to go into the catch() block below and handle it there.
-                    } catch(Exception e2) {
-                        if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as YAML also!  So.. treating it as a SCALAR string." );
-                        map = null; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
-                    }
-                } // outer-try-catch
+        //         // IF-and-ONLY-IF _r is a simple-scalar-String, then this call will wrap the String by calling output.wrapAnObject_intoLinkedHashMap()
+        //         try{
+        //             // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+        //             // and less likely to see a YAML string inline
+        //             map = tools.JSONString2YAML( s );
+        //         } catch( Exception e ) {
+        //             if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as JSON." );
+        //             try {
+        //                 // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+        //                 // and less likely to see a YAML string inline
+        //                 map = tools.YAMLString2YAML( s, false );  // 2nd parameter is 'bWrapScalar' === false;.  if 's' turns out to be scalar at this point.. I want to go into the catch() block below and handle it there.
+        //             } catch(Exception e2) {
+        //                 if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as YAML also!  So.. treating it as a SCALAR string." );
+        //                 map = null; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
+        //             }
+        //         } // outer-try-catch
 
-                this.replacementData = (map != null)? map : s;
-                // if ( s.equals( output.getTheActualObject(map).toString() ) )
-                //     o = s; // IF-and-ONLY-IF _r is a simple-scalar-String, then use it as-is.
-                break;
-            case Type_KVPairs:
-            case Type_KVPair:
-            case Type_Unknown:
-                throw new Exception( CLASSNAME + ": constructor(): Invalid _r parameter of type:" + _r.getClass().getName() + "'");
-        }
+        //         this.replacementData = (map != null)? map : s;
+        //         // if ( s.equals( output.getTheActualObject(map).toString() ) )
+        //         //     o = s; // IF-and-ONLY-IF _r is a simple-scalar-String, then use it as-is.
+        //         break;
+        //     case Type_KVPairs:
+        //     case Type_KVPair:
+        //     case Type_Unknown:
+        //         throw new Exception( CLASSNAME + ": constructor(): Invalid _r parameter of type:" + _r.getClass().getName() + "'");
+        // }
 
     }
 
