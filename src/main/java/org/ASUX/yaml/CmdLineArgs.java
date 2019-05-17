@@ -65,6 +65,7 @@ public class CmdLineArgs {
     private static final String OUTPUTFILE = "outputfile";
     private static final String YAMLPATH = "yamlpath";
     private static final String DELIMITER = "delimiter";
+    private static final String YAMLLIB = "yamllibrary";
     // private static final String PROPERTIES = "properties";
 
     public boolean verbose = false;
@@ -89,6 +90,7 @@ public class CmdLineArgs {
     public String yamlRegExpStr = "undefined";
 
     public String yamlPatternDelimiter = ".";
+    public YAML_Libraries YAMLLibrary = YAML_Libraries.ESOTERICSOFTWARE_Library;
     // public com.esotericsoftware.yamlbeans.YamlConfig.Quote quoteType = com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -179,8 +181,17 @@ public class CmdLineArgs {
         opt.setArgs(1);
         opt.setOptionalArg(false);
         opt.setArgName("delimcharacter");
+opt.setType(YAML_Libraries.class);
         options.addOption(opt);
 
+        opt = new Option("zy", YAMLLIB, false, "only 3 valid values: com.esotericsoftware.yamlbeans org.yaml.snakeyaml.Yaml org.ASUX.yaml" );
+        opt.setRequired(false);
+        opt.setArgs(1);
+        opt.setOptionalArg(false);
+        opt.setArgName("yamllibparam");
+        options.addOption(opt);
+
+        //----------------------------------
         opt = new Option("i", INPUTFILE, true, "input file path");
         opt.setRequired(true);
         options.addOption(opt);
@@ -203,7 +214,12 @@ public class CmdLineArgs {
             if ( this.yamlPatternDelimiter == null || this.yamlPatternDelimiter.equals(".") )
                 this.yamlPatternDelimiter = YAMLPath.DEFAULTDELIMITER;
 
-            this.isReadCmd = cmd.hasOption(READCMD);
+            if ( cmd.getOptionValue(YAMLLIB) != null )
+                this.YAMLLibrary = YAML_Libraries.fromString( cmd.getOptionValue(YAMLLIB) );
+            else
+                this.YAMLLibrary = YAML_Libraries.SNAKEYAML_Library; // default.
+
+                this.isReadCmd = cmd.hasOption(READCMD);
             this.isListCmd = cmd.hasOption(LISTCMD);
             this.isTableCmd = cmd.hasOption(TABLECMD);
             this.isDelCmd = cmd.hasOption(DELETECMD);
@@ -258,7 +274,8 @@ public class CmdLineArgs {
     /** For making it easy to have simple code generate debugging-output, added this toString() method to this class.
      */
     public String toString() {
-        return "verbose="+verbose+" showStats="+showStats+" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
+        return "verbose="+verbose+" showStats="+showStats+" YAML-Library="+YAMLLibrary
+        +" yamlPatternDelimiter="+yamlPatternDelimiter+" yamlRegExpStr="+yamlRegExpStr
         +" read="+isReadCmd+" list="+isListCmd+" tableColumns="+isTableCmd+" delete="+isDelCmd+" insert="+isInsertCmd+" change="+isReplaceCmd
         +" macro="+isMacroCmd+" batch="+isBatchCmd
         +" inpfile="+inputFilePath+" outputfile="+outputFilePath
