@@ -35,11 +35,13 @@ package org.ASUX.yaml;
 import java.util.LinkedHashMap;
 
 /** 
- * @see org.ASUX.yaml.Cmd
+ * <p>This class is the "memory" as we execute line by line - within a Batch-YAML-script.</p>
+ * A Batch-YAML-script allows you to 'save a value' and retrieve it later.  That is the dictionary definition of the word "Memory"
+ * @see org.ASUX.yaml.CmdInvoker
  */
 public class MemoryAndContext {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.MemoryAndContext";
+    public static final String CLASSNAME = MemoryAndContext.class.getName();
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -56,7 +58,9 @@ public class MemoryAndContext {
      */
     private final LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = new LinkedHashMap<>();
 
-    private final Cmd cmd;
+    private final CmdInvoker cmdinvoker;
+    private final GenericYAMLLoader YAMLLoader;
+    private final GenericYAMLWriter YAMLWriter;
 
     //======================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -64,12 +68,14 @@ public class MemoryAndContext {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _cmd the instance of {@link org.ASUX.yaml.Cmd} that is the entry point to this whole progam, and know all about user's inputs, options and parameters
+     *  @param _cmdinvoker the instance of {@link org.ASUX.yaml.CmdInvoker} that is the entry point to this whole progam, and know all about user's inputs, options and parameters
      */
-    public MemoryAndContext( final boolean _verbose, final boolean _showStats, final Cmd _cmd ) {
+    public MemoryAndContext( final boolean _verbose, final boolean _showStats, final CmdInvoker _cmdinvoker ) {
 		this.verbose = _verbose;
         this.showStats = _showStats;
-        this.cmd = _cmd;
+        this.cmdinvoker = _cmdinvoker;
+        this.YAMLLoader = new GenericYAMLLoader( this.verbose );
+        this.YAMLWriter = new GenericYAMLWriter( this.verbose );
     }
 
     private MemoryAndContext() {
@@ -81,13 +87,51 @@ public class MemoryAndContext {
     //======================================================================
 
     /**
-     * This allows Cmd.java to interact better with BatchYamlProcessor.java, which is the authoritative source of all "saveAs" outputs.
-     * Cmd.java will use this object (this.savedOutputMaps) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
+     * This allows this class to interact better with BatchYamlProcessor.java, which is the authoritative source of all "saveAs" outputs.
+     * This class will use this object (this.savedOutputMaps) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
      * @return this.savedOutputMaps
      */
     public LinkedHashMap<String, LinkedHashMap<String, Object> > getSavedOutputMaps() {
         return this.savedOutputMaps;
     }
+
+    /**
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
+     */
+    public GenericYAMLLoader getYamlLoader() {
+        return this.YAMLLoader;
+    }
+
+    /**
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
+     */
+    public GenericYAMLWriter getYamlWriter() {
+        return this.YAMLWriter;
+    }
+
+    // /**
+    //  * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML output generation is.
+    //  * @return a reference to the YAML Library in use.
+    //  */
+    // public YAML_Libraries getYamlLibrary() {
+    //     // why make this check below with assert()?
+    //     // Why can't I use one library to read YAML and another to write YAML?
+    //     // String s = this.YAMLLoader.getYamlLibrary().toString();
+    //     // s = (s==null) ? "null" : s;
+    //     // assert( s.equals( this.YAMLWriter.getYamlLibrary() ) );
+    //     return this.YAMLLoader.getYamlLibrary();
+    // }
+
+    // /**
+    //  * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
+    //  * @param _l the YAML-library to use going forward. See {@link YAML_Libraries} for legal values to this parameter
+    //  */
+    // public void setYamlLibrary( final YAML_Libraries _l ) {
+    //     this.YAMLLoader.setYamlLibrary(_l);
+    //     this.YAMLWriter.setYamlLibrary(_l);
+    // }
 
     //======================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -121,7 +165,6 @@ public class MemoryAndContext {
      */
     public void saveDataIntoMemory( String _dest, final LinkedHashMap<String, Object> _inputMap ) throws Exception
     {
-        // final Tools tools = new Tools(this.verbose);
         if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoMemory("+ _dest +"): 1: saving into 'memoryAndContext': " + _inputMap.toString() );
         if ( _dest == null || _inputMap == null ) return;
         _dest = _dest.trim();
@@ -142,13 +185,14 @@ public class MemoryAndContext {
     //======================================================================
 
     /**
-     * @return the count of how many items in memory.
+     * @return reference to the {@link CmdInvoker} instance that get the entire program running
      */
-    public Cmd getContext() {
-        return this.cmd;
+    public CmdInvoker getContext() {
+        return this.cmdinvoker;
     }
 
     /**
+     * Debugging tool. To see how many objects are stored in memory.
      * @return the count of how many items in memory.
      */
     public int getCount() {
@@ -156,6 +200,7 @@ public class MemoryAndContext {
     }
 
     /**
+     * Debugging tool.  See what's in memory, in case Batch-YAML-Commands are not having the right input.  This might be extreme option for you.  You are perhaps going to be better off using the 'print -' statement in your YAML-Batch script
      * @return the String format dump of memory.  Can be ugly to read.
      */
     public String dump() {
