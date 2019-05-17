@@ -121,19 +121,6 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
 
-    /**
-     * technically-override the parent-class method.  But, we'll do some pre-processing before the parent-class method is called.
-     */
-    // public boolean searchYamlForPattern(LinkedHashMap<String, Object> _map, String _yamlPathStr, final String _delim)
-    //             throws YamlException
-    // {
-        
-    // }
-    //=================================================================================
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    //=================================================================================
-
-
     /** This function will be called when a partial match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
      */
