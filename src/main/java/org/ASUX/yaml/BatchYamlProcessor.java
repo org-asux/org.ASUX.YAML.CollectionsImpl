@@ -46,14 +46,12 @@ import java.util.LinkedHashMap;
 import java.util.Properties;
 import java.util.Set;
 
-import com.esotericsoftware.yamlbeans.YamlException;
-
 /**
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation batch-processing of multiple YAML commands (combinations of read, list, delete, replace, macro commands)</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
- *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX.cmdline</a> GitHub.com projects.</p>
- * @see org.ASUX.yaml.Cmd
+ *  <p>See full details of how to use this, in {@link org.ASUX.yaml.CmdInviker} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX.cmdline</a> GitHub.com projects.</p>
+ * @see org.ASUX.yaml.CmdInvoker
  */
 public class BatchYamlProcessor {
 
@@ -150,9 +148,6 @@ public class BatchYamlProcessor {
                 return false;
             }
 
-        } catch (YamlException e) { // Warning: This must PRECEDE IOException, else compiler error.
-            e.printStackTrace(System.err);
-            System.err.println( CLASSNAME + ": go():\n\nERROR In "+ batchCmds.getState()  +".   SERIOUS Internal error: unable to process YAML.  See details above.");
         } catch (BatchFileException bfe) {
             bfe.printStackTrace(System.err);
             System.err.println(CLASSNAME + ": go():\n\n" + bfe.getMessage() );
@@ -180,18 +175,17 @@ public class BatchYamlProcessor {
      * @param _batchCmds an object of type BatchFileGrammer created by reading a batch-file, or .. .. the contents between 'foreach' and 'end' commands
      * @param _input input YAML as java.utils.LinkedHashMap&lt;String, Object&gt; object.  In case of recursion, this object can be java.lang.String
      * @return After this function completes processing SUCCESSFULLY.. it returns a java.utils.LinkedHashMap&lt;String, Object&gt; object.  If there is any failure, either return value is NULL or an Exception is thrown.
-     * @throws YamlException
      * @throws BatchFileException if any failure trying to execute any entry in the batch file.  Batch file processing will Not proceed once a problem occurs.
      * @throws FileNotFoundException if the batch file to be loaded does Not exist
      * @throws Exception
      */
     private LinkedHashMap<String, Object> processBatch( final boolean _bInRecursion, final BatchFileGrammer _batchCmds,
                         final Object _input )
-        throws YamlException, BatchFileException, java.io.FileNotFoundException, Exception
+        throws BatchFileException, java.io.FileNotFoundException, Exception
     {
         LinkedHashMap<String,Object> inputMap = null;
         LinkedHashMap<String, Object> tempOutputMap = null; // it's immediately re-initialized within WHILE-Loop below.
-        final Tools tools = new Tools( this.verbose );
+        final Tools tools = new Tools( this.verbose, this.memoryAndContext );
 
         if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(): @ BEGINNING recursion="+ _bInRecursion +" & _input="+ ((_input!=null)?_input.toString():"null") +"]" );
         final Properties forLoopProps = this.AllProps.get( BatchFileGrammer.FOREACH_PROPERTIES );
@@ -252,8 +246,7 @@ public class BatchYamlProcessor {
                     this.runcount ++;
                     break;
                 case Cmd_End:
-                    if ( this.verbose )
-                        System.out.println( CLASSNAME +" processBatch(END-cmd): found matching 'end' keyword for 'foreach' !!!!!!! \n\n");
+                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(END-cmd): found matching 'end' keyword for 'foreach' !!!!!!! \n\n");
                     this.runcount ++;
                     return inputMap;
                     // !!!!!!!!!!!! ATTENTION : Function exits here SUCCESSFULLY / NORMALLY. !!!!!!!!!!!!!!!!
@@ -279,6 +272,12 @@ public class BatchYamlProcessor {
                     tempOutputMap = this.onPrintCmd( _batchCmds, inputMap, tempOutputMap );
                     this.runcount ++;
                     break;
+                case Cmd_YAMLLibrary:
+                    if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(YAMLLibrary-cmd): Setting YAMLLibrary ="+ _batchCmds.getYAMLLibrary() );
+                    this.memoryAndContext.getYamlLoader().setYamlLibrary( _batchCmds.getYAMLLibrary() );
+                    this.memoryAndContext.getYamlWriter().setYamlLibrary( _batchCmds.getYAMLLibrary() );
+                    tempOutputMap = inputMap; // as nothing changes re: Input and Output Maps.
+                    break;
                 case Cmd_Verbose:
                     if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(recursion(): this.verbose = =["+ this.verbose +"] & _batchCmds.getVerbose()=["+ _batchCmds.getVerbose() +"].");
                     this.verbose = _batchCmds.getVerbose();
@@ -297,7 +296,7 @@ public class BatchYamlProcessor {
                 default:
                     System.out.println( CLASSNAME +" processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"):  unknown (new?) Batch-file command." );
                     System.exit(99);
-            } // switchg
+            } // switch
 
             // this line below must be the very last line in the loop
             inputMap = tempOutputMap; // because we might be doing ANOTHER iteraton of the While() loop.
@@ -322,13 +321,12 @@ public class BatchYamlProcessor {
      * @return
      * @throws BatchYamlProcessor.BatchFileException
      * @throws MacroYamlProcessor.MacroException
-     * @throws YamlException
      * @throws java.io.FileNotFoundException
      * @throws java.io.IOException
      * @throws Exception
      */
     private LinkedHashMap<String, Object>  processFOREACHCmdForObject( final BatchFileGrammer _batchCmds, Object _o )
-                throws BatchYamlProcessor.BatchFileException, MacroYamlProcessor.MacroException, YamlException, java.io.FileNotFoundException, java.io.IOException, Exception
+                throws BatchYamlProcessor.BatchFileException, MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException, Exception
     {
         if ( _o == null )
             return new LinkedHashMap<String, Object>();
@@ -374,7 +372,7 @@ public class BatchYamlProcessor {
 
     //-------------------------------------------------------------------------
     private LinkedHashMap<String, Object>  processFORECHForArray( final BatchFileGrammer _batchCmds, final java.util.AbstractCollection coll )
-                throws BatchYamlProcessor.BatchFileException, MacroYamlProcessor.MacroException, YamlException, java.io.FileNotFoundException, java.io.IOException, Exception
+                throws BatchYamlProcessor.BatchFileException, MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException, Exception
     {
         LinkedHashMap<String, Object> tempOutputMap = new LinkedHashMap<String, Object>();
 
@@ -434,11 +432,12 @@ public class BatchYamlProcessor {
      *   should be pointing to the command AFTER the 'end' command.
      * This function basically keeps track of any inner foreachs .. and that's how it knows when the matching 'end' was detected.
      * @param _batchCmds pass-by-reference, so we can alter it's state and move it to the line AFTER matching 'end' commamd
-     * @param _sInvoker
+     * @param _sInvoker for use in debugging output only (as there is tons of recursion-loops within these classes)
      * @throws BatchFileException
+     * @throws Exception
      */
     private void skipInnerForeachLoops( final BatchFileGrammer _batchCmds, final String _sInvoker )
-                                                throws BatchFileException
+                                                throws BatchFileException, Exception
     {
         final int bookmark = _batchCmds.getLineNum();
         boolean bFoundMatchingENDCmd = false;
@@ -446,7 +445,7 @@ public class BatchYamlProcessor {
         while ( _batchCmds.hasNextLine() ) {
             /* final String line22 = */ _batchCmds.nextLineOrNull(); // we do Not care what the line is about.
             _batchCmds.determineCmdType(); // must be the 2nd thing we do - if there is another line to be read from batch-file
-            if ( this.verbose ) System.out.println( CLASSNAME +" skipInnerForeachLoops(): skipping cmd "+ _batchCmds.getState() );
+            if ( this.verbose ) System.out.println( CLASSNAME +" skipInnerForeachLoops("+_sInvoker+"): skipping cmd "+ _batchCmds.getState() );
 
             final boolean bForEach22 = _batchCmds.isForEachLine();
             if ( bForEach22 ) recursionLevel ++;
@@ -467,8 +466,7 @@ public class BatchYamlProcessor {
 
     //======================================================================
     private LinkedHashMap<String, Object> processSaveToLine( final BatchFileGrammer _batchCmds, final LinkedHashMap<String, Object> _inputMap )
-                                    throws MacroYamlProcessor.MacroException,  java.io.IOException, Exception,
-                                    YamlException
+                                    throws MacroYamlProcessor.MacroException,  java.io.IOException, Exception
     {
         final String saveTo_AsIs = _batchCmds.getSaveTo();
         if ( saveTo_AsIs != null ) {
@@ -487,8 +485,8 @@ public class BatchYamlProcessor {
 
     //======================================================================
     private LinkedHashMap<String, Object> processUseAsInputLine( final BatchFileGrammer _batchCmds )
-                                throws MacroYamlProcessor.MacroException, java.io.FileNotFoundException, java.io.IOException, Exception,
-                                BatchFileException, YamlException
+                                throws java.io.FileNotFoundException, java.io.IOException, Exception,
+                                MacroYamlProcessor.MacroException, BatchFileException
     {
         final String inputFrom_AsIs = _batchCmds.getUseAsInput();
         String inputFrom = MacroYamlProcessor.evaluateMacros( inputFrom_AsIs, this.AllProps );
@@ -560,7 +558,7 @@ public class BatchYamlProcessor {
             System.out.flush();
         } else {
             // if the command/line is just the word 'print' .. print the inputMap
-            System.out.println( new Tools(this.verbose).Map2YAMLString(inputMap) );
+            System.out.println( new Tools( this.verbose, this.memoryAndContext ).Map2YAMLString(inputMap) );
         }
         return inputMap; // as nothing changes re: Input and Output Maps.
     }
@@ -621,8 +619,8 @@ public class BatchYamlProcessor {
         {
             final CmdLineArgs cmdLineArgsObj = new CmdLineArgs( this.cmdLineArgs );
             cmdLineArgsObj.verbose = _verbose; // pass on whatever this user specified on cmdline re: --verbose or not.
-            final Cmd cmd = new Cmd( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
-            final Object output = cmd.processCommand( cmdLineArgsObj, _inputMap );
+            final CmdInvoker cmdinvoker = new CmdInvoker( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
+            final Object output = cmdinvoker.processCommand( cmdLineArgsObj, _inputMap );
             return output;
         }
     }
