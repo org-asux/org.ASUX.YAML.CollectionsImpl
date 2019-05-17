@@ -40,8 +40,6 @@ import java.util.Properties;
 
 import java.util.regex.*;
 
-import com.esotericsoftware.yamlbeans.YamlException;
-
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
@@ -94,14 +92,14 @@ public class MacroYamlProcessor {
      *  @param _outpMap Pass in a new 'empty' java.utils.LinkedHashMap&lt;String, Object&gt;().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
-     *  @throws YamlException any issue reading and parsing the YAML per the appropriate YAML library
 	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within evaluateMacros() functions
+	 *  @throws Exception - forany other run time error (especially involving YAML issues)
      */
     public boolean recursiveSearch(
             final LinkedHashMap<String, Object> _inpMap,
 			final LinkedHashMap<String,Object> _outpMap,
 			final Properties _props
-    ) throws YamlException, MacroYamlProcessor.MacroException {
+    ) throws MacroYamlProcessor.MacroException, Exception {
 
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
 
