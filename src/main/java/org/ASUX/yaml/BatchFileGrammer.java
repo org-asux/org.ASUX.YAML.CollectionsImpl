@@ -66,10 +66,11 @@ public class BatchFileGrammer extends org.ASUX.common.ConfigFileScanner {
 
     //--------------------------------------------------------
 
-    enum BatchCmdType { Cmd_MakeNewRoot, Cmd_Batch, Cmd_Foreach, Cmd_End, Cmd_Properties, Cmd_SetProperty, Cmd_Print, Cmd_SaveTo, Cmd_UseAsInput, Cmd_Verbose, Cmd_Sleep, Cmd_Any };
+    enum BatchCmdType { Cmd_MakeNewRoot, Cmd_Batch, Cmd_Foreach, Cmd_End, Cmd_Properties, Cmd_SetProperty, Cmd_SaveTo, Cmd_UseAsInput, Cmd_Print, Cmd_YAMLLibrary, Cmd_Verbose, Cmd_Sleep, Cmd_Any };
     private BatchCmdType whichCmd = BatchCmdType.Cmd_Any;
 
     private boolean bLine2bEchoed = false;
+    private YAML_Libraries YAMLLibrary = YAML_Libraries.ASUXYAML_Library;
 
     private String saveTo = null;
     private String useAsInput = null;
@@ -102,6 +103,7 @@ public class BatchFileGrammer extends org.ASUX.common.ConfigFileScanner {
     protected void resetFlagsForEachLine() {
         this.whichCmd = BatchCmdType.Cmd_Any;
         this.bLine2bEchoed = false;
+        this.YAMLLibrary = YAML_Libraries.ASUXYAML_Library;
 
         this.propertiesKV = null;
         this.printExpr = null;
@@ -132,7 +134,11 @@ public class BatchFileGrammer extends org.ASUX.common.ConfigFileScanner {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    public void determineCmdType() {
+    /**
+     * This method should be called after nextLine().  nextLine() is inherited from the parent {@link org.ASUX.common.ConfigFileScanner}.
+     * @throws Exception in case of any errors.
+     */
+    public void determineCmdType() throws Exception {
 
         this.resetFlagsForEachLine();
         String line = this.currentLineOrNull(); // remember the line is most likely already trimmed.  We need to chop off any 'echo' prefix
@@ -152,6 +158,16 @@ public class BatchFileGrammer extends org.ASUX.common.ConfigFileScanner {
                 this.bLine2bEchoed = true;
                 if ( this.verbose ) System.out.println( "\t 2nd echoing Line # "+ this.getState() );
                 // fall thru below.. to identify the commands
+            }
+
+            Pattern yamlLibraryPattern = Pattern.compile( "^\\s*useYAMLLibrary\\s+("+ YAML_Libraries.list("|") +")\\s*$" );
+            Matcher yamlLibraryMatcher    = yamlLibraryPattern.matcher( line );
+            if (yamlLibraryMatcher.find()) {
+                if ( this.verbose ) System.out.println( CLASSNAME +": I found the text "+ yamlLibraryMatcher.group() +" starting at index "+  yamlLibraryMatcher.start() +" and ending at index "+ yamlLibraryMatcher.end() );    
+                this.YAMLLibrary = YAML_Libraries.fromString( yamlLibraryMatcher.group(1) ); // line.substring( yamlLibraryMatcher.start(), yamlLibraryMatcher.end() );
+                if ( this.verbose ) System.out.println( "\t YAMLLibrary=[" + this.YAMLLibrary +"]" );
+                this.whichCmd = BatchCmdType.Cmd_YAMLLibrary;
+                return;
             }
 
             Pattern makeNewRootPattern = Pattern.compile( "^\\s*makeNewRoot\\s+("+ REGEXP_NAME +")\\s*$" );
@@ -328,6 +344,14 @@ public class BatchFileGrammer extends org.ASUX.common.ConfigFileScanner {
             return this.subBatchFile;
         else
             return null;
+    }
+
+    /**
+     * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML-output generation is.
+     * @return a reference to the YAML Library in use. See {@link YAML_Libraries} for legal values.
+     */
+    public YAML_Libraries getYAMLLibrary() {
+        return this.YAMLLibrary;
     }
 
     /** This function helps detect if the current line pointed to by this.currentLine() contains a 'sleep ___' entry - which will cause the Batch-file-processing to take a quick nap as directed.
