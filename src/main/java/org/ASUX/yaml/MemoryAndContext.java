@@ -59,7 +59,7 @@ public class MemoryAndContext {
     private final LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = new LinkedHashMap<>();
 
     private final CmdInvoker cmdinvoker;
-    private final GenericYAMLLoader YAMLLoader;
+    private final GenericYAMLScanner YAMLLoader;
     private final GenericYAMLWriter YAMLWriter;
 
     //======================================================================
@@ -74,7 +74,7 @@ public class MemoryAndContext {
 		this.verbose = _verbose;
         this.showStats = _showStats;
         this.cmdinvoker = _cmdinvoker;
-        this.YAMLLoader = new GenericYAMLLoader( this.verbose );
+        this.YAMLLoader = new GenericYAMLScanner( this.verbose );
         this.YAMLWriter = new GenericYAMLWriter( this.verbose );
     }
 
@@ -99,7 +99,7 @@ public class MemoryAndContext {
      * Reference to the implementation of the YAML read/parsing ONLY
      * @return a reference to the YAML Library in use.
      */
-    public GenericYAMLLoader getYamlLoader() {
+    public GenericYAMLScanner getYamlLoader() {
         return this.YAMLLoader;
     }
 
