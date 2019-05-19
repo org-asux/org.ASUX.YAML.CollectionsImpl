@@ -37,7 +37,7 @@ import java.util.LinkedHashMap;
 /** 
  * <p>This class is the "memory" as we execute line by line - within a Batch-YAML-script.</p>
  * A Batch-YAML-script allows you to 'save a value' and retrieve it later.  That is the dictionary definition of the word "Memory"
- * @see org.ASUX.yaml.CmdInvoker
+ * @see org.ASUX.yaml.CollectionsImpl.CmdInvoker
  */
 public class MemoryAndContext {
 
@@ -58,7 +58,7 @@ public class MemoryAndContext {
      */
     private final LinkedHashMap<String, LinkedHashMap<String, Object> > savedOutputMaps = new LinkedHashMap<>();
 
-    private final CmdInvoker cmdinvoker;
+    private final org.ASUX.yaml.CollectionsImpl.CmdInvoker cmdinvoker;
     private final GenericYAMLScanner YAMLLoader;
     private final GenericYAMLWriter YAMLWriter;
 
@@ -68,9 +68,9 @@ public class MemoryAndContext {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _cmdinvoker the instance of {@link org.ASUX.yaml.CmdInvoker} that is the entry point to this whole progam, and know all about user's inputs, options and parameters
+     *  @param _cmdinvoker the instance of {@link org.ASUX.yaml.CollectionsImpl.CmdInvoker} that is the entry point to this whole progam, and know all about user's inputs, options and parameters
      */
-    public MemoryAndContext( final boolean _verbose, final boolean _showStats, final CmdInvoker _cmdinvoker ) {
+    public MemoryAndContext( final boolean _verbose, final boolean _showStats, final org.ASUX.yaml.CollectionsImpl.CmdInvoker _cmdinvoker ) {
 		this.verbose = _verbose;
         this.showStats = _showStats;
         this.cmdinvoker = _cmdinvoker;
@@ -185,9 +185,9 @@ public class MemoryAndContext {
     //======================================================================
 
     /**
-     * @return reference to the {@link CmdInvoker} instance that get the entire program running
+     * @return reference to the {@link org.ASUX.yaml.CollectionsImpl.CmdInvoker} instance that get the entire program running
      */
-    public CmdInvoker getContext() {
+    public org.ASUX.yaml.CollectionsImpl.CmdInvoker getContext() {
         return this.cmdinvoker;
     }
 

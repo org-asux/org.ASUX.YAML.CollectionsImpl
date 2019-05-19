@@ -32,6 +32,8 @@
 
 package org.ASUX.yaml;
 
+import org.ASUX.yaml.CollectionsImpl.MacroYamlProcessor;
+
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output;
 import org.ASUX.common.Debug;
@@ -51,7 +53,7 @@ import java.util.Set;
  *  <p>This class contains implementation batch-processing of multiple YAML commands (combinations of read, list, delete, replace, macro commands)</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.CmdInviker} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX.cmdline</a> GitHub.com projects.</p>
- * @see org.ASUX.yaml.CmdInvoker
+ * @see org.ASUX.yaml.CollectionsImpl.CmdInvoker
  */
 public class BatchYamlProcessor {
 
@@ -619,7 +621,7 @@ public class BatchYamlProcessor {
         {
             final CmdLineArgs cmdLineArgsObj = new CmdLineArgs( this.cmdLineArgs );
             cmdLineArgsObj.verbose = _verbose; // pass on whatever this user specified on cmdline re: --verbose or not.
-            final CmdInvoker cmdinvoker = new CmdInvoker( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
+            final org.ASUX.yaml.CollectionsImpl.CmdInvoker cmdinvoker = new org.ASUX.yaml.CollectionsImpl.CmdInvoker( cmdLineArgsObj.verbose, cmdLineArgsObj.showStats, _memoryAndContext ); // the 3rd parameter passed is an instance variable of the outer BatchYamlProcessor.java class
             final Object output = cmdinvoker.processCommand( cmdLineArgsObj, _inputMap );
             return output;
         }

@@ -109,7 +109,7 @@ public class Cmd {
 
         try {
             cmdLineArgs = new CmdLineArgs( args );
-            CmdInvoker cmdinvoker = new CmdInvoker( cmdLineArgs.verbose, cmdLineArgs.showStats );
+            org.ASUX.yaml.CollectionsImpl.CmdInvoker cmdinvoker = new org.ASUX.yaml.CollectionsImpl.CmdInvoker( cmdLineArgs.verbose, cmdLineArgs.showStats );
             if (cmdLineArgs.verbose) System.out.println( CLASSNAME + ": main(String[]): getting started with cmdline args = " + cmdLineArgs + " " );
 
             cmdinvoker.getMemoryAndContext().getYamlLoader().setYamlLibrary( cmdLineArgs.YAMLLibrary );
