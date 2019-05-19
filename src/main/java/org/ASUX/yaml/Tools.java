@@ -51,7 +51,7 @@ public class Tools {
 
     public static final String CLASSNAME = Tools.class.getName();
 
-    private final GenericYAMLLoader YAMLLoader;
+    private final GenericYAMLScanner YAMLLoader;
     private final GenericYAMLWriter YAMLWriter;
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
@@ -77,10 +77,10 @@ public class Tools {
     /**
       * <p>Utility class for use within the org.ASUX.yaml library only</p><p>one of 2 constructors - public/private/protected</p>
       * @param _verbose Whether you want deluge of debug-output onto System.out.
-      * @param _loader instance of GenericYAMLLoader (which is configured per the cmdline --yamllibrary option) that you can find in CmdInvoker and BatchYamlProcessor.java
+      * @param _loader instance of GenericYAMLScanner (which is configured per the cmdline --yamllibrary option) that you can find in CmdInvoker and BatchYamlProcessor.java
       * @param _writer instance of GenericYAMLWriter (which is configured per the cmdline --yamllibrary option) that you can find in CmdInvoker and BatchYamlProcessor.java
       */
-    public Tools(boolean _verbose, final GenericYAMLLoader _loader, GenericYAMLWriter _writer ) {
+    public Tools(boolean _verbose, final GenericYAMLScanner _loader, GenericYAMLWriter _writer ) {
         this.verbose = _verbose;
         this.YAMLLoader = _loader;
         this.YAMLWriter = _writer;
@@ -324,7 +324,7 @@ public class Tools {
 
     public static void main( String[] args ) {
         try {
-            final GenericYAMLLoader rdr = new GenericYAMLLoader(true);
+            final GenericYAMLScanner rdr = new GenericYAMLScanner(true);
             rdr.setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
             final GenericYAMLWriter wr = new GenericYAMLWriter(true);
             wr.setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
