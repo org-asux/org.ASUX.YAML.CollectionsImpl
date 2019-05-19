@@ -30,13 +30,13 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.ASUX.yaml;
+package org.ASUX.yaml.CollectionsImpl;
 
-import org.ASUX.common.Tuple;
-import org.ASUX.common.Output;
+import org.ASUX.yaml.YAMLPath;
 
 // import java.util.Map;
 import java.util.LinkedList;
+// import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
@@ -46,23 +46,27 @@ import java.util.LinkedHashMap;
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
  * @see org.ASUX.yaml.AbstractYamlEntryProcessor
  */
-public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
+public class ReadYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.DeleteYamlEntry";
+    public static final String CLASSNAME = "org.ASUX.yaml.ReadYamlEntry";
 
-    protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
+    private int count;
+    private LinkedList<Object> output;
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
      */
-    public DeleteYamlEntry( final boolean _verbose, final boolean _showStats ) {
+    public ReadYamlEntry( final boolean _verbose, final boolean _showStats ) {
         super( _verbose, _showStats );
+        this.count = 0;
+        this.output = new LinkedList<>();
     }
 
-    private DeleteYamlEntry() {
-        super( false, true );
+    private ReadYamlEntry() {
+        super(false, false);
+        this.count = 0;
+        this.output = new LinkedList<>();
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -73,7 +77,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+        // Do Nothing for "read YAML-entry command"
         return true;
     }
 
@@ -81,17 +85,19 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths)
-    {
-        if ( this.verbose )
-            System.out.print("onEnd2EndMatch: _end2EndPaths =");
-        if ( this.verbose || this.showStats ) {
-            _end2EndPaths.forEach( s -> System.out.print(s+", ") );
-            System.out.println("");
-        }
+    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        this.keys2bRemoved.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
-        if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
+        this.count ++;
+        if ( this.verbose ) {
+            System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
+            _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
+            System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _map.get(_key) = ["+ _map.get(_key) +"]");
+        }
+        Object o = _map.get(_key);
+        final String s = (o == null) ? "null" : o.toString();
+        if ( this.verbose ) System.out.println( s );
+        this.output.add( o ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
+
         return true;
     }
 
@@ -101,7 +107,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
-        // Do Nothing for "delete YAML-entry command"
+            // Do Nothing for "read YAML-entry command"
     }
 
     //-------------------------------------
@@ -113,19 +119,23 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
 
-        if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): count=" + this.keys2bRemoved.size() );
-        for (Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
-            final String rhsStr = tpl.val.toString();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
-            tpl.val.remove(tpl.key);
-        }
-        // java's forEach never works if you are altering anything within the Lambda body
-        // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
-        if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );
+        if ( this.showStats ) System.out.println("Total=" + this.count );
+    }
 
-        // This IF-Statement line below is Not outputting the entire YAML-Path.  So, I'm relying on onEnd2EndMatch() to do the job.
-        // Not a squeeky clean design (as summary should be done at end only).. but it avoids having to add additional data structures
-        // if ( this.showStats ) this.keys2bRemoved.forEach( tpl -> { System.out.println(tpl.key); } );
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * @return the count of how many matches happened.  This value is also = this.getOutput.size()
+     */
+    public int getCount() {
+        return this.count;
+    }
+
+    /**
+     * @return the output as an LinkedList of objects (either Strings or java.util.LinkedHashMap&lt;String, Object&gt; objects).  This is because the 'rhs' of an 
+     */
+    public LinkedList<Object> getOutput() {
+        return this.output;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

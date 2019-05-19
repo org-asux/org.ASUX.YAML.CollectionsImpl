@@ -30,7 +30,9 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.ASUX.yaml;
+package org.ASUX.yaml.CollectionsImpl;
+
+import org.ASUX.yaml.YAMLPath;
 
 // import java.util.Map;
 import java.util.LinkedList;

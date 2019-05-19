@@ -30,7 +30,9 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.ASUX.yaml;
+package org.ASUX.yaml.CollectionsImpl;
+
+import org.ASUX.yaml.YAMLPath;
 
 import java.util.regex.*;
 
@@ -99,7 +101,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             final String elem = this.tableColumns[ix];
             final String errMsg = CLASSNAME +" Constructor: Invalid column # "+ ix +" '"+ elem +"' provided to Table-query Command.";
             try {
-                Pattern p = Pattern.compile( BatchFileGrammer.REGEXP_NAME );
+                Pattern p = Pattern.compile( org.ASUX.yaml.BatchFileGrammer.REGEXP_NAME );
                 if ( p.matcher( elem ).matches() )
                     continue;
                 else
