@@ -5,12 +5,12 @@
 
 	<name>${project.groupId}:${project.artifactId}</name>
 	<groupId>org.asux</groupId>
-	<artifactId>yaml</artifactId>
+	<artifactId>yaml.collectionsimpl</artifactId>
     
     <version>1.0</version>
     <inceptionYear>2019</inceptionYear>
     <description>Cmdline interface to process YAML files, leveraging the brilliantly robust gitbub project  github.com:esotericsoftware/yamlbeans.git (which is a Java object graphs, to and from YAML)</description>
-	<url>https://github.com/org-asux/org.ASUX.yaml</url>
+	<url>https://github.com/org-asux/org-ASUX.github.io/wiki/Welcome-to-WIKI-for-org.ASUX</url>
 
     <properties>
         <!-- Properties added here are globally useable -->
@@ -52,9 +52,9 @@
 	</contributors>
 
     <scm>
-		<url>http://github.com/org-asux/org.ASUX.yaml.git</url>
-		<connection>scm:git:git@github.com:org-asux/org.ASUX.yaml.git</connection>
-		<developerConnection>scm:git:git@github.com:org-asux/org.ASUX.yaml.git</developerConnection>
+		<url>https://github.com/org-asux/org.ASUX.YAML.CollectionsImpl.git</url>
+		<connection>scm:git:git@github.com:org-asux/org.ASUX.YAML.CollectionsImpl.git</connection>
+		<developerConnection>scm:git:git@github.com:org-asux/org.ASUX.YAML.CollectionsImpl.git</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
 
@@ -74,6 +74,11 @@
         <dependency>
             <groupId>org.asux</groupId>
             <artifactId>common</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.asux</groupId>
+            <artifactId>yaml</artifactId>
             <version>1.0</version>
         </dependency>
         <dependency>
