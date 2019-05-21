@@ -33,12 +33,15 @@
 package org.ASUX.yaml.CollectionsImpl;
 
 import org.ASUX.yaml.YAMLPath;
+import org.ASUX.yaml.YAML_Libraries;
 import org.ASUX.yaml.MemoryAndContext;
 import org.ASUX.yaml.CmdLineArgs;
+import org.ASUX.yaml.CmdLineArgsBatchCmd;
+import org.ASUX.yaml.CmdLineArgsInsertCmd;
+import org.ASUX.yaml.CmdLineArgsMacroCmd;
+import org.ASUX.yaml.CmdLineArgsReplaceCmd;
+import org.ASUX.yaml.CmdLineArgsTableCmd;
 import org.ASUX.yaml.BatchYamlProcessor;
-import org.ASUX.yaml.GenericYAMLWriter;
-import org.ASUX.yaml.Tools;
-
 
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output.OutputType;
@@ -96,24 +99,16 @@ import static org.junit.Assert.*;
  * @see org.ASUX.yaml.DeleteYamlEntry
  * @see org.ASUX.yaml.ReplaceYamlEntry
  */
-public class CmdInvoker {
+public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
+
+    private static final long serialVersionUID = 212L;
 
     public static final String CLASSNAME = CmdInvoker.class.getName();
 
     // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
 
-    /**
-     * <p>Whether you want deluge of debug-output onto System.out.</p>
-     * <p>Set this via the constructor.</p>
-     * <p>It's read-only (final data-attribute).</p>
-     */
-    public final boolean verbose;
-
-    /**
-     * This is a private LinkedHashMap&lt;String, LinkedHashMap&lt;String, Object&gt; &gt; memoryAndContext = new LinkedHashMap&lt;&gt;(); .. cannot be null.  Most useful for @see org.ASUX.yaml.BatchYamlProcessor - which allows this this class to lookup !propertyvariable.
-     * In case you need access to it - be nice and use it in a read-only manner - use the getter()
-     */
-    private final MemoryAndContext memoryAndContext;
+    private transient GenericYAMLScanner YAMLScanner;
+    private transient GenericYAMLWriter YAMLWriter;
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -124,7 +119,7 @@ public class CmdInvoker {
      *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public CmdInvoker( final boolean _verbose, final boolean _showStats ) {
-        this( _verbose, _showStats, null );
+        this( _verbose, _showStats, null, new Tools(_verbose ) );
     }
 
     /**
@@ -132,31 +127,68 @@ public class CmdInvoker {
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
      *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within {@link BatchYamlProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
+     *  @param _tools reference to an instance of org.ASUX.yaml.Tools class or it's subclasses org.ASUX.yaml.CollectionsImpl.Tools or org.ASUX.yaml.NodeImpl.Tools
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
-        this.verbose = _verbose;
-        if ( _memoryAndContext == null )
-            this.memoryAndContext = new MemoryAndContext( _verbose, _showStats, this );
-        else
-            this.memoryAndContext = _memoryAndContext;
+    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext, final org.ASUX.yaml.Tools _tools ) {
+        super(_verbose, _showStats, _memoryAndContext, _tools );
+        init();
+    }
+
+    private void init() {
+        this.YAMLScanner = new GenericYAMLScanner( this.verbose );
+        this.YAMLWriter = new GenericYAMLWriter( this.verbose );
     }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
+
     /**
-     * This allows this class (CmdInvoker) to interact better with BatchYamlProcessor.java, which is the authoritative source of all "saveAs" outputs.
-     * This class (CmdInvoker) will use this object (this.memoryAndContext) primarily for passing the replacement-Content and insert-Content (which is NOT the same as --input/-i cmdline option)
-     * @return this.memoryAndContext
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
      */
-    public MemoryAndContext getMemoryAndContext() {
-        return this.memoryAndContext;
+    public GenericYAMLScanner getYamlScanner() {
+        return this.YAMLScanner;
     }
 
+    /**
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
+     */
+    public GenericYAMLWriter getYamlWriter() {
+        return this.YAMLWriter;
+    }
+
+    /**
+     * know which YAML-parsing/emitting library was chosen by user.  Ideally used within a Batch-Yaml script / BatchYamlProcessor.java
+     * @return the YAML-library in use. See {@link YAML_Libraries} for legal values to this parameter
+     */
+    public YAML_Libraries getYamlLibrary() {
+        // why make this check below with assert()?
+        // Why shouln't users use one library to read YAML and another to write YAML?
+        final YAML_Libraries sclib = this.YAMLScanner.getYamlLibrary();
+        // String s = sclib.toString();
+        // s = (s==null) ? "null" : s;
+        // assert( s.equals( this.YAMLWriter.getYamlLibrary() ) );
+        assert( sclib == this.YAMLWriter.getYamlLibrary() );
+        return sclib;
+    }
+
+    /**
+     * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
+     * @param _l the YAML-library to use going forward. See {@link YAML_Libraries} for legal values to this parameter
+     */
+    public void setYamlLibrary( final YAML_Libraries _l ) {
+        if ( this.YAMLScanner == null || this.YAMLWriter == null )
+            this.init();
+        this.YAMLScanner.setYamlLibrary(_l);
+        this.YAMLWriter.setYamlLibrary(_l);
+    }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
+
     /**
      *  This function is meant to be used by Cmd.main() and by BatchProcessor.java.  Read the code *FIRST*, to see if you can use this function too.
      *  @param _cmdLineArgs yes, everything passed as commandline arguments to the Java program / org.ASUX.yaml.Cmd
@@ -172,86 +204,92 @@ public class CmdInvoker {
                 YAMLPath.YAMLPathException
     {
         // final Output output = new Output(this.verbose);
-        // final Tools tools = new Tools( this.verbose, this.memoryAndContext );
+        // final org.ASUX.yaml.Tools tools = this.getTools();
 
-        // OPEN QUESTION: do we need to do these 2 lines for every line in the batch-file?  I think no.
-        // This set..() invocations are taken care of - within Cmd.java and within BatchYamlProcess.java
-        // this.memoryAndContext.getYamlLoader().setYamlLibrary( _cmdLineArgs.YAMLLibrary );
-        // this.memoryAndContext.getYamlWriter().setYamlLibrary( _cmdLineArgs.YAMLLibrary );
+        // This entire CollectionsImpl library clearly is chained to the EsotericSoftware Yamlbeans library.
+        // So, let's mae that explicit
+        this.getYamlScanner().setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
+        this.getYamlWriter().setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
 
-        if ( _cmdLineArgs.isReadCmd ) {
+        switch ( _cmdLineArgs.cmdType ) {
+        case READ:
             ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             readcmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             final LinkedList<Object> outputStr = readcmd.getOutput();
             return outputStr;
 
-        } else if ( _cmdLineArgs.isListCmd ) {
+        case LIST:
             ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, YAMLPath.DEFAULTPRINTDELIMITER );
             listcmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
-            final ArrayList<String> outputStr = listcmd.getOutput();
-            return outputStr;
+            final ArrayList<String> outputStr2 = listcmd.getOutput();
+            return outputStr2;
 
-        } else if ( _cmdLineArgs.isTableCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isTableCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & tableColumns=[" + _cmdLineArgs.tableColumns +"]" );
-            TableYamlQuery tblcmd = new TableYamlQuery( _cmdLineArgs.verbose, _cmdLineArgs.showStats, _cmdLineArgs.tableColumns, _cmdLineArgs.yamlPatternDelimiter );
-            tblcmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
-            final LinkedList< ArrayList<String> > output = tblcmd.getOutput();
-            return output;
-
-        } else if ( _cmdLineArgs.isDelCmd) {
+        case DELETE:
             if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
             DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
             delcmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
             return _inputData;
 
-        } else if ( _cmdLineArgs.isInsertCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  _cmdLineArgs.yamlRegExpStr="+ _cmdLineArgs.yamlRegExpStr +" & loading @Insert-file: " + _cmdLineArgs.insertFilePath);
-            final Object newContent = this.getDataFromReference( _cmdLineArgs.insertFilePath );
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
+        case TABLE:
+            final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) _cmdLineArgs;
+            if (claTbl.verbose) System.out.println(CLASSNAME + ": processCommand(isTableCmd):  claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
+            TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, claTbl.tableColumns, claTbl.yamlPatternDelimiter );
+            tblcmd.searchYamlForPattern( _inputData, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
+            final LinkedList< ArrayList<String> > output = tblcmd.getOutput();
+            return output;
+
+        case INSERT:
+            final CmdLineArgsInsertCmd claIns = (CmdLineArgsInsertCmd) _cmdLineArgs;
+            if (claIns.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  claIns.yamlRegExpStr="+ claIns.yamlRegExpStr +" & loading @Insert-file: " + claIns.insertFilePath);
+            final Object newContent = this.getDataFromReference( claIns.insertFilePath );
+            if (claIns.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
             // Within a Batch-YAML context, the output of the previous line does NOT have to be a LinkedHashMap.
             // In such a case, an ArrayList or LinkedList object is converted into one -- by Tools.wrapAnObject_intoLinkedHashMap().
             // So, we will use the inverse-function Tools.getTheActualObject() to undo that.
-            InsertYamlEntry inscmd = new InsertYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, new Output(this.verbose).getTheActualObject( newContent ) );
-            inscmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+            InsertYamlEntry inscmd = new InsertYamlEntry( claIns.verbose, claIns.showStats, new Output(this.verbose).getTheActualObject( newContent ) );
+            inscmd.searchYamlForPattern( _inputData, claIns.yamlRegExpStr, claIns.yamlPatternDelimiter );
             return _inputData;
 
-        } else if ( _cmdLineArgs.isReplaceCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + _cmdLineArgs.replaceFilePath);
-            final Object replContent = this.getDataFromReference( _cmdLineArgs.replaceFilePath );
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
-            ReplaceYamlEntry replcmd = new ReplaceYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, replContent );
-            replcmd.searchYamlForPattern( _inputData, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+        case REPLACE:
+            final CmdLineArgsReplaceCmd claRepl = (CmdLineArgsReplaceCmd) _cmdLineArgs;
+            if (claRepl.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + claRepl.replaceFilePath);
+            final Object replContent = this.getDataFromReference( claRepl.replaceFilePath );
+            if (claRepl.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
+            ReplaceYamlEntry replcmd = new ReplaceYamlEntry( claRepl.verbose, claRepl.showStats, replContent );
+            replcmd.searchYamlForPattern( _inputData, claRepl.yamlRegExpStr, claRepl.yamlPatternDelimiter );
             return _inputData;
 
-        } else if ( _cmdLineArgs.isMacroCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + _cmdLineArgs.propertiesFilePath + "]");
+        case MACRO:
+            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) _cmdLineArgs;
+            if (claMacro.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + claMacro.propertiesFilePath + "]");
             final Properties properties = new Properties();
-            assert( _cmdLineArgs.propertiesFilePath != null );
-            if ( _cmdLineArgs.propertiesFilePath.startsWith("@") ) {
-                final java.io.InputStream input = new java.io.FileInputStream( _cmdLineArgs.propertiesFilePath.substring(1) );
+            assert( claMacro.propertiesFilePath != null );
+            if ( claMacro.propertiesFilePath.startsWith("@") ) {
+                final java.io.InputStream input = new java.io.FileInputStream( claMacro.propertiesFilePath.substring(1) );
                 properties.load( input );
             } else {
-                final java.io.StringReader sr = new java.io.StringReader( _cmdLineArgs.propertiesFilePath );
+                final java.io.StringReader sr = new java.io.StringReader( claMacro.propertiesFilePath );
                 properties.load( sr );
             }
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + _cmdLineArgs.propertiesFilePath + "]");
-            MacroYamlProcessor macro = new MacroYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
+            if (claMacro.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
+            MacroYamlProcessor macro = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats );
             final LinkedHashMap<String, Object> outpMap = new LinkedHashMap<>();
             macro.recursiveSearch( _inputData, outpMap, properties );
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return outpMap;
 
-        } else if ( _cmdLineArgs.isBatchCmd ) {
-            if (_cmdLineArgs.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + _cmdLineArgs.batchFilePath + "]");
-            BatchYamlProcessor batcher = new BatchYamlProcessor( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
+        case BATCH:
+            final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) _cmdLineArgs;
+            if (claBatch.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
+            BatchYamlProcessor batcher = new BatchYamlProcessor( claBatch.verbose, claBatch.showStats );
             batcher.setMemoryAndContext( this.memoryAndContext );
-            LinkedHashMap<String, Object> outpMap = new LinkedHashMap<String, Object>();
-            batcher.go( _cmdLineArgs.batchFilePath, _inputData, outpMap );
-            if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap =" + outpMap +"\n\n");
-            // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
-            return outpMap;
+            LinkedHashMap<String, Object> outpMap2 = new LinkedHashMap<String, Object>();
+            batcher.go( claBatch.batchFilePath, _inputData, outpMap2 );
+            if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap2 =" + outpMap2 +"\n\n");
+            // writer.write(outpMap2); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
+            return outpMap2;
 
-        } else {
+        default:
             final String es = CLASSNAME + ": processCommand(): Unimplemented command: " + _cmdLineArgs.toString();
             System.err.println( es );
             throw new Exception( es );
@@ -276,7 +314,7 @@ public class CmdInvoker {
     {
         if ( _src == null || _src.trim().length() <= 0 )
             return null;
-        final Tools tools = new Tools( this.verbose, this.memoryAndContext.getYamlLoader(), this.memoryAndContext.getYamlWriter() );
+        final org.ASUX.yaml.Tools tools = this.getTools();
 
         if ( _src.startsWith("@") ) {
             final String srcFile = _src.substring(1);
@@ -301,7 +339,7 @@ public class CmdInvoker {
             } else if ( srcFile.endsWith(".yaml") ) {
                 if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a YAML-file provided via '@'." );
                 final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
-                final org.ASUX.common.Output.Object<?> output = this.memoryAndContext.getYamlLoader().load( reader1 );
+                final org.ASUX.common.Output.Object<?> output = this.getYamlScanner().load( reader1 );
                 final LinkedHashMap<String, Object> mapObj = output.getMap(); // new YamlReader( reader1 ).read( LinkedHashMap.class );
                 reader1.close(); // automatically includes fs.close();
                 // final LinkedHashMap<String, Object> mapObj = new YamlReader( reader1 ).read( LinkedHashMap.class );
@@ -357,7 +395,7 @@ public class CmdInvoker {
     public void saveDataIntoReference( final String _dest, final LinkedHashMap<String, Object> _inputMap )
                 throws FileNotFoundException, IOException, Exception
     {
-        final Tools tools = new Tools( this.verbose, this.memoryAndContext );
+        final org.ASUX.yaml.Tools tools = this.getTools();
         if ( _dest != null ) {
             if ( _dest.startsWith("@") ) {
                 if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
@@ -378,7 +416,7 @@ public class CmdInvoker {
                     return;
                 } else if ( destFile.endsWith(".yaml") ) {
                     if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
-                    final GenericYAMLWriter yamlwriter = this.memoryAndContext.getYamlWriter();
+                    final GenericYAMLWriter yamlwriter = this.getYamlWriter();
                     final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
                     yamlwriter.prepare( filewr );
                     yamlwriter.write( _inputMap );
