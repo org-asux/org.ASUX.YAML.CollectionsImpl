@@ -42,31 +42,12 @@ import java.io.InputStreamReader;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
-// import java.io.FileNotFoundException;
-// import java.io.IOException;
-
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.LinkedHashMap;
 
 import static org.junit.Assert.*;
-
-
-// https://yaml.org/spec/1.2/spec.html#id2762107
-// import org.yaml.snakeyaml.Yaml;
-// import org.yaml.snakeyaml.composer.Composer;
-// import org.yaml.snakeyaml.nodes.NodeTuple;
-// import org.yaml.snakeyaml.nodes.NodeId;
-// import org.yaml.snakeyaml.nodes.Node;
-// import org.yaml.snakeyaml.nodes.ScalarNode;
-// import org.yaml.snakeyaml.nodes.MappingNode;
-// import org.yaml.snakeyaml.nodes.SequenceNode;
-// import org.yaml.snakeyaml.constructor.Constructor;
-// import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
-// import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-
-// import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 //=================================================================================
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -78,15 +59,11 @@ public class GenericYAMLWriter {
 
     private boolean verbose;
 
-    // https://yaml.org/spec/1.2/spec.html#id2762107
-    protected org.yaml.snakeyaml.Yaml snakeYaml;
-    protected java.io.Writer snakeYamlWriter;
-
     protected com.esotericsoftware.yamlbeans.YamlWriter esotericsoftwareWriter = null;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    private YAML_Libraries sYAMLLibrary = YAML_Libraries.ASUXYAML_Library;
+    private YAML_Libraries sYAMLLibrary = YAML_Libraries.CollectionsImpl_Library;
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -138,42 +115,6 @@ public class GenericYAMLWriter {
     {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
-            case NodeImpl_Library:
-            case SNAKEYAML_Library:
-                // https://yaml.org/spec/1.2/spec.html#id2762107
-                // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-                this.snakeYaml = new org.yaml.snakeyaml.Yaml( this.defaultConfigurationForSnakeYamlWriter() );
-                this.snakeYamlWriter = _javawriter;
-
-                // //-------------------------------------------------
-                // Serializer serializer = new Serializer(new Emitter(output, dumperOptions), resolver, dumperOptions, rootTag);
-                // try {
-                //     serializer.open();
-                //     serializer.serialize(node);
-                //     // while (data.hasNext()) {
-                //     //    Node node = representer.represent(data.next());
-                //     //    serializer.serialize(node);
-                //     // }
-                //     serializer.close();
-                // } catch (IOException e) {
-                //     throw new YAMLException(e);
-                // }
-                // //-------------------------------------------------
-                // org.yaml.snakeyaml.emitter.Emitter emitter = new org.yaml.snakeyaml.emitter.Emitter( _javawriter
-                //                , new org.yaml.snakeyaml.DumperOptions() );
-                // try {
-                //     for ( org.yaml.snakeyaml.events.Event event : document) {
-                //         emitter.emit(event);
-                //     }
-                //     fail("Loading must fail for " + files[i].getAbsolutePath());
-                //     // System.err.println("Loading must fail for " +
-                //     // files[i].getAbsolutePath());
-                // } catch( org.yaml.snakeyaml.error.YAMLException e ) {
-                // } catch (Exception e) {
-                //     assertTrue(true);
-                // }
-                break;
-
             case CollectionsImpl_Library:
             case ESOTERICSOFTWARE_Library:
                 // prepare for output: whether it goes to System.out -or- to an actual output-file.
@@ -183,6 +124,8 @@ public class GenericYAMLWriter {
                 this.defaultConfigurationForEsotericsoftwareYamlWriter( this.esotericsoftwareWriter ); // , cmdLineArgs.quoteType
                 break;
 
+            case NodeImpl_Library:
+            case SNAKEYAML_Library:
             case ASUXYAML_Library:
             default:
                 final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
@@ -191,28 +134,6 @@ public class GenericYAMLWriter {
                 // break;
         } // switch
     } //function
-
-    public void test( final java.io.Writer _javawriter, final org.yaml.snakeyaml.nodes.Node _output ) throws Exception
-    {
-        //-------------------------------------------------
-        final org.yaml.snakeyaml.DumperOptions dumperOptions = this.defaultConfigurationForSnakeYamlWriter();
-        final org.yaml.snakeyaml.emitter.Emitter snakeemitter = new org.yaml.snakeyaml.emitter.Emitter( _javawriter, dumperOptions );
-        final org.yaml.snakeyaml.resolver.Resolver resolver = new org.yaml.snakeyaml.resolver.Resolver();
-        final org.yaml.snakeyaml.nodes.Tag tag = org.yaml.snakeyaml.nodes.Tag.STR;
-        org.yaml.snakeyaml.serializer.Serializer serializer = new org.yaml.snakeyaml.serializer.Serializer(
-                            snakeemitter, resolver, dumperOptions, tag );
-        try {
-            serializer.open();
-            serializer.serialize( _output );
-            // while (data.hasNext()) {
-            //    Node node = representer.represent(data.next());
-            //    serializer.serialize(node);
-            // }
-            serializer.close();
-        } catch (java.io.IOException e) {
-            throw new Exception(e);
-        }
-    }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -227,17 +148,6 @@ public class GenericYAMLWriter {
     {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
-            case NodeImpl_Library:
-            case SNAKEYAML_Library:
-                // https://yaml.org/spec/1.2/spec.html#id2762107
-                // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
-                // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
-                if ( this.snakeYaml != null || this.snakeYamlWriter != null ) {
-                    this.snakeYaml.dump( _output, this.snakeYamlWriter );
-                } else {
-                    throw new Exception( CLASSNAME +" write("+ this.getYamlLibrary() +"): cannot invoke write() before prepare()." );
-                } // if esotericsoftwareWriter !=   null
-                break;
 
             case CollectionsImpl_Library:
             case ESOTERICSOFTWARE_Library:
@@ -257,6 +167,8 @@ public class GenericYAMLWriter {
                 } // if esotericsoftwareWriter != null
                 break;
 
+            case NodeImpl_Library:
+            case SNAKEYAML_Library:
             case ASUXYAML_Library:
             default:
                 final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
@@ -277,10 +189,6 @@ public class GenericYAMLWriter {
     public void close() throws Exception {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
-            case NodeImpl_Library:
-            case SNAKEYAML_Library:
-                // Nothing to close if we use new org.yaml.snakeyaml.Yaml().dump();
-                break;
 
             case CollectionsImpl_Library:
             case ESOTERICSOFTWARE_Library:
@@ -289,6 +197,8 @@ public class GenericYAMLWriter {
                 this.esotericsoftwareWriter = null;
                 break;
 
+            case NodeImpl_Library:
+            case SNAKEYAML_Library:
             case ASUXYAML_Library:
             default:
                 final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
@@ -302,53 +212,22 @@ public class GenericYAMLWriter {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    public org.yaml.snakeyaml.DumperOptions defaultConfigurationForSnakeYamlWriter() throws Exception
-    {
-        final org.yaml.snakeyaml.DumperOptions dopt = new org.yaml.snakeyaml.DumperOptions(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-        // dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );
-                                                // other value are: PLAIN(a.k.a. nothing), DOUBLE_QUOTED, FOLDED('>')
-        // dopt.setIndent( 3 );
-        dopt.setCanonical( false );
-        dopt.setPrettyFlow( true );
-        dopt.setDefaultFlowStyle( org.yaml.snakeyaml.DumperOptions.FlowStyle.BLOCK ); // BLOCK, FLOW or AUTO
-        // dopt.setWidth( 80 ); // default is 80
-        dopt.setSplitLines( false ); // do NOT Split up long lines
-        // dopt.setTags( Map<String, String> _tags);
-        // Not yet available in latest release:- dopt.setNonPrintableStyle( org.yaml.snakeyaml.DumperOptions.NonPrintableStyle.ESCAPE ); // When String contains non-printable characters SnakeYAML convert it to binary data with the !!binary tag. Set this to ESCAPE to keep the !!str tag and escape the non-printable chars with \\x or \\u
-        return dopt;
-    }
-
     public void defaultConfigurationForEsotericsoftwareYamlWriter( com.esotericsoftware.yamlbeans.YamlWriter esotericsoftwareWriter ) throws Exception
                                             // com.esotericsoftware.yamlbeans.YamlConfig.Quote qtyp
     {
-        // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
-        switch ( this.getYamlLibrary() ) {
-            case NodeImpl_Library:
-            case SNAKEYAML_Library:
-                break;
+        assert ( this.getYamlLibrary() == YAML_Libraries.CollectionsImpl_Library || this.getYamlLibrary() == YAML_Libraries.ESOTERICSOFTWARE_Library );
 
-            case CollectionsImpl_Library:
-            case ESOTERICSOFTWARE_Library:
-                // esotericsoftwareWriter.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
-                esotericsoftwareWriter.getConfig().writeConfig.setWriteClassname(
-                        com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER); // I hate !<pkg.className> within YAML files. So does AWS I believe.
-                // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( qtyp );
-                // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.NONE );
-                // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE );
-                // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.DOUBLE );
+        // esotericsoftwareWriter.getConfig().writeConfig.setWriteRootTags(false); // Does NOTHING :-
+        esotericsoftwareWriter.getConfig().writeConfig.setWriteClassname(
+                com.esotericsoftware.yamlbeans.YamlConfig.WriteClassName.NEVER); // I hate !<pkg.className> within YAML files. So does AWS I believe.
+        // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( qtyp );
+        // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.NONE );
+        // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.SINGLE );
+        // esotericsoftwareWriter.getConfig().writeConfig.setQuoteChar( com.esotericsoftware.yamlbeans.YamlConfig.Quote.DOUBLE );
 
-                // esotericsoftwareWriter.getConfig().setClassTag("Equals", Equals.class);
-                // esotericsoftwareWriter.getConfig().setClassTag("Or", Or.class);
-                // esotericsoftwareWriter.getConfig().setClassTag("Ref", Ref.class);
-                break;
-
-            case ASUXYAML_Library:
-            default:
-                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
-                System.err.println( es );
-                throw new Exception( es );
-                // break;
-        } // switch
+        // esotericsoftwareWriter.getConfig().setClassTag("Equals", Equals.class);
+        // esotericsoftwareWriter.getConfig().setClassTag("Or", Or.class);
+        // esotericsoftwareWriter.getConfig().setClassTag("Ref", Ref.class);
     } // method
 
 }
