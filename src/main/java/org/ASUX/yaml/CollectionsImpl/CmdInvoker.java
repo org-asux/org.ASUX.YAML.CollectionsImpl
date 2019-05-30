@@ -316,7 +316,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     {
         if ( _src == null || _src.trim().length() <= 0 )
             return null;
-        final org.ASUX.yaml.Tools tools = this.getTools();
+        final org.ASUX.yaml.CollectionsImpl.Tools tools = (org.ASUX.yaml.CollectionsImpl.Tools) this.getTools();
 
         if ( _src.startsWith("@") ) {
             final String srcFile = _src.substring(1);
