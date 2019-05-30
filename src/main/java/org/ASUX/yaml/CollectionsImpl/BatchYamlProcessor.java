@@ -199,7 +199,7 @@ public class BatchYamlProcessor {
     {
         LinkedHashMap<String,Object> inputMap = null;
         LinkedHashMap<String, Object> tempOutputMap = null; // it's immediately re-initialized within WHILE-Loop below.
-        final org.ASUX.yaml.Tools tools = this.memoryAndContext.getContext().getTools();
+        final org.ASUX.yaml.CollectionsImpl.Tools tools = (org.ASUX.yaml.CollectionsImpl.Tools) this.memoryAndContext.getContext().getTools();
 
         if ( this.verbose ) System.out.println( CLASSNAME +" processBatch(): @ BEGINNING recursion="+ _bInRecursion +" & _input="+ ((_input!=null)?_input.toString():"null") +"]" );
         final Properties forLoopProps = this.AllProps.get( BatchFileGrammer.FOREACH_PROPERTIES );
@@ -543,6 +543,7 @@ public class BatchYamlProcessor {
         final BatchFileGrammer _batchCmds, final LinkedHashMap<String, Object> inputMap, final LinkedHashMap<String, Object> tempOutputMap )
         throws Macros.MacroException, Exception
     {
+        final org.ASUX.yaml.CollectionsImpl.Tools tools = ( org.ASUX.yaml.CollectionsImpl.Tools ) this.memoryAndContext.getContext().getTools();
         final String printExpression = _batchCmds.getPrintExpr();
         if ( this.verbose ) System.out.print( ">>>>>>>>>>>>> print line is ["+printExpression +"]" );
         if ( (printExpression != null) && (  !  printExpression.equals("-")) )  {
@@ -571,7 +572,7 @@ public class BatchYamlProcessor {
             System.out.flush();
         } else {
             // if the command/line is just the word 'print' .. print the inputMap
-            System.out.println( this.memoryAndContext.getContext().getTools().Map2YAMLString(inputMap) );
+            System.out.println( tools.Map2YAMLString(inputMap) );
         }
         return inputMap; // as nothing changes re: Input and Output Maps.
     }
