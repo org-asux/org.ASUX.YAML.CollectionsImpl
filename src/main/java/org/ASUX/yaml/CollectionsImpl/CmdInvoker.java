@@ -41,7 +41,7 @@ import org.ASUX.yaml.CmdLineArgsInsertCmd;
 import org.ASUX.yaml.CmdLineArgsMacroCmd;
 import org.ASUX.yaml.CmdLineArgsReplaceCmd;
 import org.ASUX.yaml.CmdLineArgsTableCmd;
-
+import org.ASUX.yaml.JSONTools;
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output.OutputType;
 import org.ASUX.common.Output;
@@ -106,6 +106,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
 
     // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
 
+    private final Tools tools;
     private transient GenericYAMLScanner YAMLScanner;
     private transient GenericYAMLWriter YAMLWriter;
 
@@ -118,7 +119,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public CmdInvoker( final boolean _verbose, final boolean _showStats ) {
-        this( _verbose, _showStats, null, new Tools(_verbose ) );
+        this( _verbose, _showStats, null );
     }
 
     /**
@@ -126,11 +127,11 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
      *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within {@link BatchYamlProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
-     *  @param _tools reference to an instance of org.ASUX.yaml.Tools class or it's subclasses org.ASUX.yaml.CollectionsImpl.Tools or org.ASUX.yaml.NodeImpl.Tools
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext, final org.ASUX.yaml.Tools _tools ) {
-        super(_verbose, _showStats, _memoryAndContext, _tools );
+    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
+        super(_verbose, _showStats, _memoryAndContext );
         init();
+        tools = new Tools( _verbose );
     }
 
     private void init() {
@@ -184,6 +185,28 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         this.YAMLWriter.setYamlLibrary(_l);
     }
 
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     *  <p>Example: For SnakeYAML-library based subclass of this, this should return DumperOptions.class</p>
+     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
+     *  @return name of class of the object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions)
+     */
+    @Override
+    public Class<?> getLibraryOptionsClass() {
+        return String.class;
+    }
+
+    /**
+     *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
+     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
+     * @return instance/object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
+     */
+    @Override
+    public Object getLibraryOptionsObject() {
+        return null;
+    }
+
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
@@ -198,12 +221,14 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
-    public Object processCommand ( CmdLineArgs _cmdLineArgs, final Object _inputData )
+    public Object processCommand ( org.ASUX.yaml.CmdLineArgsCommon _cmdLineArgs, final Object _inputData )
                 throws FileNotFoundException, IOException, Exception,
                 YAMLPath.YAMLPathException
     {
-        // final Output output = new Output(this.verbose);
-        // final org.ASUX.yaml.Tools tools = this.getTools();
+        assertTrue( _cmdLineArgs instanceof org.ASUX.yaml.CmdLineArgs );
+        final org.ASUX.yaml.CmdLineArgs cmdLineArgs = (org.ASUX.yaml.CmdLineArgs) _cmdLineArgs;
+        final String HDR = CLASSNAME + ": processCommand("+ cmdLineArgs.cmdType +"): ";
+
         assert( _inputData instanceof LinkedHashMap );
         @SuppressWarnings("unchecked")
         final LinkedHashMap<String, Object> _inputMap = (LinkedHashMap<String, Object>) _inputData;
@@ -213,27 +238,27 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         this.getYamlScanner().setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
         this.getYamlWriter().setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
 
-        switch ( _cmdLineArgs.cmdType ) {
+        switch ( cmdLineArgs.cmdType ) {
         case READ:
-            ReadYamlEntry readcmd = new ReadYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
-            readcmd.searchYamlForPattern( _inputMap, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+            ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats );
+            readcmd.searchYamlForPattern( _inputMap, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             final LinkedList<Object> outputStr = readcmd.getOutput();
             return outputStr;
 
         case LIST:
-            ListYamlEntry listcmd = new ListYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats, YAMLPath.DEFAULTPRINTDELIMITER );
-            listcmd.searchYamlForPattern( _inputMap, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+            ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, YAMLPath.DEFAULTPRINTDELIMITER );
+            listcmd.searchYamlForPattern( _inputMap, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             final ArrayList<String> outputStr2 = listcmd.getOutput();
             return outputStr2;
 
         case DELETE:
-            if ( _cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
-            DeleteYamlEntry delcmd = new DeleteYamlEntry( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
-            delcmd.searchYamlForPattern( _inputMap, _cmdLineArgs.yamlRegExpStr, _cmdLineArgs.yamlPatternDelimiter );
+            if ( cmdLineArgs.verbose ) System.out.println(CLASSNAME + ": processCommand(isDelCmd): about to start DELETE command");
+            DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats );
+            delcmd.searchYamlForPattern( _inputMap, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             return _inputMap;
 
         case TABLE:
-            final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) _cmdLineArgs;
+            final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) cmdLineArgs;
             if (claTbl.verbose) System.out.println(CLASSNAME + ": processCommand(isTableCmd):  claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
             TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, claTbl.tableColumns, claTbl.yamlPatternDelimiter );
             tblcmd.searchYamlForPattern( _inputMap, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
@@ -241,7 +266,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             return output;
 
         case INSERT:
-            final CmdLineArgsInsertCmd claIns = (CmdLineArgsInsertCmd) _cmdLineArgs;
+            final CmdLineArgsInsertCmd claIns = (CmdLineArgsInsertCmd) cmdLineArgs;
             if (claIns.verbose) System.out.println(CLASSNAME + ": processCommand(isInsertCmd):  claIns.yamlRegExpStr="+ claIns.yamlRegExpStr +" & loading @Insert-file: " + claIns.insertFilePath);
             final Object newContent = this.getDataFromReference( claIns.insertFilePath );
             if (claIns.verbose) System.out.println( CLASSNAME + ": processCommand(isInsertCmd): about to start INSERT command using: [" + newContent.toString() + "]");
@@ -253,7 +278,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             return _inputMap;
 
         case REPLACE:
-            final CmdLineArgsReplaceCmd claRepl = (CmdLineArgsReplaceCmd) _cmdLineArgs;
+            final CmdLineArgsReplaceCmd claRepl = (CmdLineArgsReplaceCmd) cmdLineArgs;
             if (claRepl.verbose) System.out.println(CLASSNAME + ": processCommand(isReplaceCmd): loading @Replace-file: " + claRepl.replaceFilePath);
             final Object replContent = this.getDataFromReference( claRepl.replaceFilePath );
             if (claRepl.verbose) System.out.println( CLASSNAME + ": processCommand(isReplaceCmd): about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
@@ -261,33 +286,58 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             replcmd.searchYamlForPattern( _inputMap, claRepl.yamlRegExpStr, claRepl.yamlPatternDelimiter );
             return _inputMap;
 
+        case MACROYAML:
         case MACRO:
-            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) _cmdLineArgs;
-            if (claMacro.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): loading Props file [" + claMacro.propertiesFilePath + "]");
-            final Properties properties = new Properties();
-            assert( claMacro.propertiesFilePath != null );
-            if ( claMacro.propertiesFilePath.startsWith("@") ) {
-                final java.io.InputStream input = new java.io.FileInputStream( claMacro.propertiesFilePath.substring(1) );
-                properties.load( input );
-            } else {
-                final java.io.StringReader sr = new java.io.StringReader( claMacro.propertiesFilePath );
-                properties.load( sr );
+            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
+            if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
+            assertTrue( claMacro.propertiesFilePath != null );
+
+            MacroYamlProcessor macroYamlPr = null;
+            // MacroStringProcessor macroStrPr = null;
+
+            switch ( cmdLineArgs.cmdType ) {
+                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
+                                // macroStrPr = new MacroStringProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                                break;
+                case MACROYAML: macroYamlPr = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                                break;
+                default: assertTrue( false ); // should not be here.
             }
-            if (claMacro.verbose) System.out.println( CLASSNAME + ": processCommand(isMacroCmd): about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
-            MacroYamlProcessor macro = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats );
+
+            Properties properties = null;
+            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {
+                // do Nothing.   properties will remain set to 'null'
+            } else {
+                final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
+                if (content instanceof Properties) {
+                    properties = (Properties) content;
+                }else {
+                    throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents (of type'"+ content.getClass().getName() +"')are Not compatible with java.util.Properties" );
+                }
+            }
+
+            if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
             final LinkedHashMap<String, Object> outpMap = new LinkedHashMap<>();
-            macro.recursiveSearch( _inputMap, outpMap, properties );
+            switch ( cmdLineArgs.cmdType ) {
+                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
+                                // outpData = macroStrPr.searchNReplace( raw-java.lang.String-from-where??, properties, this.memoryAndContext.getAllPropsRef() );
+                                break;
+                case MACROYAML: macroYamlPr.recursiveSearch( _inputMap, outpMap, properties, this.memoryAndContext.getAllPropsRef() );
+                                break;
+                default: assertTrue( false ); // should not be here.
+            }
+
             // writer.write(outpMap); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return outpMap;
 
         case BATCH:
-            final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) _cmdLineArgs;
-            if (claBatch.verbose) System.out.println( CLASSNAME + ": processCommand(isBatchCmd): about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
-            BatchYamlProcessor batcher = new BatchYamlProcessor( claBatch.verbose, claBatch.showStats );
+            final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
+            if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
+            final BatchYamlProcessor batcher = new BatchYamlProcessor( claBatch.verbose, claBatch.showStats );
             batcher.setMemoryAndContext( this.memoryAndContext );
-            LinkedHashMap<String, Object> outpMap2 = new LinkedHashMap<String, Object>();
-            batcher.go( claBatch.batchFilePath, _inputMap, outpMap2 );
-            if ( this.verbose ) System.out.println( CLASSNAME +" processCommand(isBatchCmd):  outpMap2 =" + outpMap2 +"\n\n");
+            // final LinkedHashMap<String, Object> outpMap2 = new LinkedHashMap<String, Object>();
+            final LinkedHashMap<String, Object> outpMap2 = batcher.go( claBatch.batchFilePath, _inputMap );
+            if ( this.verbose ) System.out.println( HDR +" outpMap2 =" + outpMap2 +"\n\n");
             // writer.write(outpMap2); // The contents of java.util.LinkedHashMap<String, Object> has been updated with replacement strings. so, dump it.
             return outpMap2;
 
@@ -302,84 +352,17 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
-
     /**
-     * This functon takes a single parameter that is a javalang.String value - and, either detects it to be inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to something saved in {@link MemoryAndContext} within a Batch-file execution (must be prefixed with a '!')
+     * This is a simpler facade/interface to {@link InputsOutputs#getDataFromReference}, for use by {@link BatchCmdProcessor}
      * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
-     * @return an object (either LinkedHashMap, ArrayList or LinkedList)
+     * @return an object (either any of Node, SequenceNode, MapNode, ScalarNode ..)
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
      * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
-    public Object getDataFromReference( final String _src  )
-                throws FileNotFoundException, IOException, Exception
-    {
-        if ( _src == null || _src.trim().length() <= 0 )
-            return null;
-        final org.ASUX.yaml.CollectionsImpl.Tools tools = (org.ASUX.yaml.CollectionsImpl.Tools) this.getTools();
-
-        if ( _src.startsWith("@") ) {
-            final String srcFile = _src.substring(1);
-            final InputStream fs = new FileInputStream( srcFile );
-            if ( srcFile.endsWith(".json") ) {
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a JSON-file provided via '@'." );
-                //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
-                // final LinkedHashMap<String, Object> retMap2 = ..
-                // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
-                //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
-                // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
-                com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true );
-                objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
-                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
-                LinkedHashMap<String, Object> retMap2 = null;
-                retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference< LinkedHashMap<String,Object> >(){}  );
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
-                retMap2 = tools.lintRemoverMap( retMap2 );
-                fs.close();
-                return retMap2;
-            } else if ( srcFile.endsWith(".yaml") ) {
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a YAML-file provided via '@'." );
-                final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
-                final org.ASUX.common.Output.Object<?> output = this.getYamlScanner().load( reader1 );
-                final LinkedHashMap<String, Object> mapObj = output.getMap(); // new YamlReader( reader1 ).read( LinkedHashMap.class );
-                reader1.close(); // automatically includes fs.close();
-                // final LinkedHashMap<String, Object> mapObj = new YamlReader( reader1 ).read( LinkedHashMap.class );
-                // @SuppressWarnings("unchecked")
-                // final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + mapObj );
-                return mapObj;
-            } else {
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
-                return null;
-            }
-
-        } else if ( _src.startsWith("!") ) {
-            if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting Recall-from-memory via '!'." );
-            final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
-            // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-            final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
-            if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
-            return recalledContent;
-
-        } else {
-            if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): Must be an inline String.  Let me see if it's inline-JSON or inline-YAML." );
-            try{
-                // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-                // and less likely to see a YAML string inline
-                return tools.JSONString2Map(_src);
-            } catch( Exception e ) {
-                if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as JSON for [" + _src +"]" );
-                try {
-                    // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-                    // and less likely to see a YAML string inline
-                    return tools.YAMLString2Map( _src, false );
-                } catch(Exception e2) {
-                    if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as YAML for [" + _src +"] also!  So.. treating it as a SCALAR string." );
-                    return _src; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
-                }
-            } // outer-try-catch
-        } // if-else startsWith("@")("!")
+    public Object getDataFromReference( final String _src )
+                                throws FileNotFoundException, IOException, Exception
+    {   return InputsOutputs.getDataFromReference( _src, this.memoryAndContext, this.getYamlScanner(), this.verbose );
     }
 
     //==============================================================================
@@ -387,7 +370,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     //==============================================================================
 
     /**
-     * This function saved _input to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
+     * This is a simpler facade/interface to {@link InputsOutputs#saveDataIntoReference}, for use by {@link BatchCmdProcessor}
      * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
      * @param _input the object to be saved using the reference provided in _dest paramater
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
@@ -395,58 +378,177 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public void saveDataIntoReference( final String _dest, final Object _input )
-                throws FileNotFoundException, IOException, Exception
-    {
-        final org.ASUX.yaml.Tools tools = this.getTools();
-        if ( _dest != null ) {
-            if ( _dest.startsWith("@") ) {
-                if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
-                final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
-                if ( destFile.endsWith(".json") ) {
-                    //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
-                    // final LinkedHashMap<String, Object> retMap2 = ..
-                    // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
-                    //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
-                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
-                    final com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    // final InputStream fs = new FileInputStream( destFile );
-                    final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
-                    objMapper.writeValue( filewr, _input );
-                    filewr.close();
-                    // fs.close();
-                    // if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + tools.Map2JSONString(_input) );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + _input );
-                    return;
-                } else if ( destFile.endsWith(".yaml") ) {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
-                    final GenericYAMLWriter yamlwriter = this.getYamlWriter();
-                    final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
-                    yamlwriter.prepare( filewr );
-                    yamlwriter.write( _input );
-                    yamlwriter.close();
-                    filewr.close();
-                    // if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + tools.Map2YAMLString(_input) );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + _input );
-                    return;
-                } else {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
-                    throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
-                }
-            } else {
-                // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _dest +"): detecting Save-To-memory via '!' (if '!' is not specified, it's implied)." );
-                final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
-                if ( this.memoryAndContext != null ) {
-                    // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-                    this.memoryAndContext.saveDataIntoMemory( saveToMapName, _input );  // remove '!' as the 1st character in the destination-reference provided
-                    if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + _input );
-                    // if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + tools.Map2YAMLString(_input) );
-                }
-            }
-        } else {
-            return; // do Nothing.
-        }
+                            throws FileNotFoundException, IOException, Exception
+    {   InputsOutputs.saveDataIntoReference( _dest, _input, this.memoryAndContext, this.getYamlWriter(), this.verbose );
     }
+                        
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    /**
+     *  <p>This method needs to supplement org.ASUX.YAML.CmdInvoker.deepClone() as this subclass (org.ASUX.YAML.NodeImpl.CmdInvoker) has it's own transient instance-fields/variables.</p>
+     *  <p>Such Transients are made Transients for only ONE-SINGLE REASON - they are NOT serializable).</p>
+     *  <p>!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</p>
+     *  <p>So, after a deepClone() of CmdInvoker.java .. you'll need to call: </p>
+     *  <p> <code> clone.dumperopt = origObj.dumperopt; </code> <br>
+     *  @param origObj the non-null original to clone
+     *  @return a properly cloned and re-initiated clone of the original (that works around instance-variables that are NOT serializable)
+     *  @throws Exception when org.ASUX.common.Utils.deepClone clones the core of this class-instance 
+     */
+    public static CmdInvoker deepClone( final CmdInvoker origObj ) throws Exception {
+        final org.ASUX.yaml.CmdInvoker newCmdInvk = org.ASUX.yaml.CmdInvoker.deepClone( origObj );
+        final CmdInvoker newCmdinvoker = (CmdInvoker) newCmdInvk;
+        return newCmdinvoker;
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    // /**
+    //  * This functon takes a single parameter that is a javalang.String value - and, either detects it to be inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to something saved in {@link MemoryAndContext} within a Batch-file execution (must be prefixed with a '!')
+    //  * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
+    //  * @return an object (either LinkedHashMap, ArrayList or LinkedList)
+    //  * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+    //  * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+    //  * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+    //  */
+    // public Object getDataFromReference( final String _src  )
+    //             throws FileNotFoundException, IOException, Exception
+    // {
+    //     if ( _src == null || _src.trim().length() <= 0 )
+    //         return null;
+    //     final Tools tools = new Tools( this.verbose );
+
+    //     if ( _src.startsWith("@") ) {
+    //         final String srcFile = _src.substring(1);
+    //         final InputStream fs = new FileInputStream( srcFile );
+    //         if ( srcFile.endsWith(".json") ) {
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a JSON-file provided via '@'." );
+    //             //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+    //             // final LinkedHashMap<String, Object> retMap2 = ..
+    //             // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+    //             //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+    //             // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+    //             com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    //             objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true );
+    //             objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+    //                 com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
+    //             LinkedHashMap<String, Object> retMap2 = null;
+    //             retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference< LinkedHashMap<String,Object> >(){}  );
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
+    //             retMap2 = tools.lintRemoverMap( retMap2 );
+    //             fs.close();
+    //             return retMap2;
+    //         } else if ( srcFile.endsWith(".yaml") ) {
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detected a YAML-file provided via '@'." );
+    //             final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
+    //             final org.ASUX.common.Output.Object<?> output = this.getYamlScanner().load( reader1 );
+    //             final LinkedHashMap<String, Object> mapObj = output.getMap(); // new YamlReader( reader1 ).read( LinkedHashMap.class );
+    //             reader1.close(); // automatically includes fs.close();
+    //             // final LinkedHashMap<String, Object> mapObj = new YamlReader( reader1 ).read( LinkedHashMap.class );
+    //             // @SuppressWarnings("unchecked")
+    //             // final LinkedHashMap<String, Object> retMap3 = (LinkedHashMap<String, Object>) mapObj;
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): YAML loaded into tempOutputMap =" + mapObj );
+    //             return mapObj;
+    //         } else {
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
+    //             return null;
+    //         }
+
+    //     } else if ( _src.startsWith("!") ) {
+    //         if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): detecting Recall-from-memory via '!'." );
+    //         final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
+    //         // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+    //         final Object recalledContent = (this.memoryAndContext != null) ?  this.memoryAndContext.getDataFromMemory( savedMapName ) : null;
+    //         if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
+    //         return recalledContent;
+
+    //     } else {
+    //         if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _src +"): Must be an inline String.  Let me see if it's inline-JSON or inline-YAML." );
+    //         try{
+    //             // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+    //             // and less likely to see a YAML string inline
+    //             return JSONTools.JSONString2Map(  this.verbose, _src );
+    //         } catch( Exception e ) {
+    //             if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as JSON for [" + _src +"]" );
+    //             try {
+    //                 // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+    //                 // and less likely to see a YAML string inline
+    //                 return tools.YAMLString2Map( _src, false );
+    //             } catch(Exception e2) {
+    //                 if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as YAML for [" + _src +"] also!  So.. treating it as a SCALAR string." );
+    //                 return _src; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
+    //             }
+    //         } // outer-try-catch
+    //     } // if-else startsWith("@")("!")
+    // }
+
+    // //==============================================================================
+    // //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // //==============================================================================
+
+    // /**
+    //  * This function saved _input to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
+    //  * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
+    //  * @param _input the object to be saved using the reference provided in _dest paramater
+    //  * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+    //  * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+    //  * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+    //  */
+    // public void saveDataIntoReference( final String _dest, final Object _input )
+    //             throws FileNotFoundException, IOException, Exception
+    // {
+    //     if ( _dest != null ) {
+    //         if ( _dest.startsWith("@") ) {
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
+    //             final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
+    //             if ( destFile.endsWith(".json") ) {
+    //                 //     // https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/Gson.java
+    //                 // final LinkedHashMap<String, Object> retMap2 = ..
+    //                 // tempOutputMap = new com.google.gson.Gson().fromJson(  reader1,
+    //                 //                        new com.google.gson.reflect.TypeToken< LinkedHashMap<String, Object> >() {}.getType()   );
+    //                 // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+    //                 final com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    //                 // final InputStream fs = new FileInputStream( destFile );
+    //                 final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
+    //                 objMapper.writeValue( filewr, _input );
+    //                 filewr.close();
+    //                 if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + _input );
+    //                 return;
+    //             } else if ( destFile.endsWith(".yaml") ) {
+    //                 if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
+    //                 final GenericYAMLWriter yamlwriter = this.getYamlWriter();
+    //                 final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
+    //                 yamlwriter.prepare( filewr );
+    //                 yamlwriter.write( _input );
+    //                 yamlwriter.close();
+    //                 filewr.close();
+    //                 if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + _input );
+    //                 return;
+    //             } else {
+    //                 if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
+    //                 throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
+    //             }
+    //         } else {
+    //             // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
+    //             if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _dest +"): detecting Save-To-memory via '!' (if '!' is not specified, it's implied)." );
+    //             final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
+    //             if ( this.memoryAndContext != null ) {
+    //                 // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+    //                 this.memoryAndContext.saveDataIntoMemory( saveToMapName, _input );  // remove '!' as the 1st character in the destination-reference provided
+    //                 if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + _input );
+    //             }
+    //         }
+    //     } else {
+    //         return; // do Nothing.
+    //     }
+    // }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

@@ -49,10 +49,11 @@ import static org.junit.Assert.*;
  *  <p>One example is the work around required when replacing the 'Key' - within the MACRO command Processor.</p>
  *  <p>If the key is already inside single or double-quotes.. then the replacement ends up as <code>'"newkeystring"'</code></p>
  */
-public class Tools extends org.ASUX.yaml.Tools {
+public class Tools {
 
     public static final String CLASSNAME = Tools.class.getName();
     private CmdInvoker cmdInvoker;
+    private boolean verbose;
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -63,7 +64,7 @@ public class Tools extends org.ASUX.yaml.Tools {
       * @param _verbose Whether you want deluge of debug-output onto System.out.
       */
     public Tools(boolean _verbose ) {
-        super( _verbose );
+        this.verbose = _verbose;
     }
 
     //==============================================================================
@@ -185,7 +186,7 @@ public class Tools extends org.ASUX.yaml.Tools {
             wr.setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
             final Tools tools = new Tools( true );
             // tools.cmdInvoker
-            LinkedHashMap<String, Object> map = tools.JSONString2Map( args[0] );
+            LinkedHashMap<String, Object> map = org.ASUX.yaml.JSONTools.JSONString2Map( true, args[0] );
             System.out.println("Normal completion of program");
         } catch (java.io.IOException e) {
             e.printStackTrace(System.err);

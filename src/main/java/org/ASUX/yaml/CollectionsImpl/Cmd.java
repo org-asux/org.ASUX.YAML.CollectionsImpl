@@ -223,19 +223,19 @@ public class Cmd {
 
         } catch (YAMLPath.YAMLPathException e) {
             e.printStackTrace(System.err);
-            System.err.println( "YAML-Path pattern is invalid: '" + cmdlineargs + "'.");
+            System.err.println( "YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + ".\n"+ e );
             System.exit(8);
         } catch (java.io.FileNotFoundException e) {
             e.printStackTrace(System.err);
-            System.err.println( "INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'.");
+            System.err.println( "INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + ".\n"+ e );
             System.exit(8);
         } catch (java.io.IOException e) {
             e.printStackTrace(System.err);
-            System.err.println( "OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'.");
+            System.err.println( "OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + ".\nn"+ e );
             System.exit(7);
         } catch (Exception e) {
             e.printStackTrace(System.err);
-            System.err.println( "Internal error: '" + cmdlineargs.outputFilePath + "'.");
+            System.err.println( "Internal error: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + ".\n"+ e );
             System.exit(6);
         }
 

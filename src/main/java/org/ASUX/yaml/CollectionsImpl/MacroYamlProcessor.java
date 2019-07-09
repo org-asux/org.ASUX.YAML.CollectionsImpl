@@ -32,6 +32,7 @@
 
 package org.ASUX.yaml.CollectionsImpl;
 
+import org.ASUX.common.Macros;
 import org.ASUX.yaml.YAMLPath;
 
 // import java.util.Map;
@@ -87,20 +88,36 @@ public class MacroYamlProcessor {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+    private static final String macroEval( final boolean _verbose, final String _s,
+                                    final Properties _props, final LinkedHashMap<String,Properties> _allProps )
+                                    throws Exception
+    {
+        final String HDR = CLASSNAME + ": macroEval("+_s+"): ";
+        final String v1 = org.ASUX.common.Macros.eval( _verbose, _s, _props );
+        if ( _verbose ) System.out.println( HDR +" lookup #1 on Properties = ["+ v1 + "]" );
+        final String v2 = org.ASUX.common.Macros.eval( _verbose, v1, _allProps );
+        if ( _verbose ) System.out.println( HDR +" lookup #2 for LinkedHashMap<String,Properties> = ["+ v2 + "]" );
+        return v2;
+    }
+
+	//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p>Note: this function expects you to pass in a 'new java.utils.LinkedHashMap&lt;String, Object&gt;()' as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _inpMap and _outMap will be identical when function returns</p>
      *  @param _inpMap A java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _outpMap Pass in a new 'empty' java.utils.LinkedHashMap&lt;String, Object&gt;().  THis is what this function *RETURNS* after Macros are evalated within _inpMap
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
+     *  @param _allProps can be null, otherwise an instance of LinkedHashMap&lt;String,Properties&gt;
      *  @return true = whether at least one match of ${ASUX::} happened.
-	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within org.ASUX.yaml.Macros.eval() functions
+	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within org.ASUX.common.Macros.eval() functions
 	 *  @throws Exception - forany other run time error (especially involving YAML issues)
      */
     public boolean recursiveSearch(
             final LinkedHashMap<String, Object> _inpMap,
 			final LinkedHashMap<String,Object> _outpMap,
-			final Properties _props
+            final Properties _props,
+            final LinkedHashMap<String,Properties> _allProps
     ) throws MacroYamlProcessor.MacroException, Exception {
 
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
@@ -111,7 +128,7 @@ public class MacroYamlProcessor {
         //--------------------------
         for (Object keyAsIs : _inpMap.keySet()) {
 
-            final String key = org.ASUX.yaml.Macros.eval( keyAsIs.toString(), _props );
+            final String key = macroEval( this.verbose, keyAsIs.toString(), _props, _allProps );
             assert( key != null );
 
             // Note: the lookup within _inpMap .. uses keyAsIs.  Not key.
@@ -128,7 +145,7 @@ public class MacroYamlProcessor {
 				final LinkedHashMap<String,Object> newMap1	= new LinkedHashMap<>(); // create an empty Map
 				@SuppressWarnings("unchecked")
 				final LinkedHashMap<String, Object> rhs	= (LinkedHashMap<String, Object>) rhsObj;
-				bChangesMade = this.recursiveSearch( rhs, newMap1, _props ); // recursion call
+				bChangesMade = this.recursiveSearch( rhs, newMap1, _props, _allProps ); // recursion call
 
 				_outpMap.put( key, newMap1 );
 				// Why am I not simply doing:-       _outpMap.put( key, newMap1 )
@@ -147,11 +164,11 @@ public class MacroYamlProcessor {
 						final LinkedHashMap<String,Object> newMap2 = new LinkedHashMap<>();
 						@SuppressWarnings("unchecked")
 						final LinkedHashMap<String,Object> rhs22 = (LinkedHashMap<String,Object>) o;
-						bChangesMade = this.recursiveSearch( rhs22, newMap2, _props ); // recursion call
+						bChangesMade = this.recursiveSearch( rhs22, newMap2, _props, _allProps ); // recursion call
 						newarr.add( newMap2 );
 					} else if ( o instanceof java.lang.String ) {
 						// by o.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
-						newarr.add ( org.ASUX.yaml.Macros.eval( o.toString(), _props ) );
+						newarr.add ( macroEval( this.verbose, o.toString(), _props, _allProps ) );
 					} else {
 						System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 						System.exit(92); // This is a serious failure. Shouldn't be happening.
@@ -164,7 +181,7 @@ public class MacroYamlProcessor {
 			} else if ( rhsObj instanceof java.lang.String ) {
 				// by rhsObj.toString(), I'm cloning the String object.. .. so both _inpMap and _outpMap do NOT share the same String object
 				final String asis = rhsObj.toString();
-				final String news = org.ASUX.yaml.Macros.eval( asis, _props);
+				final String news = macroEval( this.verbose, asis, _props, _allProps );
 				if (   !    asis.equals(news) ) this.changesMade ++;
 				_outpMap.put( key, news );
 				// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
