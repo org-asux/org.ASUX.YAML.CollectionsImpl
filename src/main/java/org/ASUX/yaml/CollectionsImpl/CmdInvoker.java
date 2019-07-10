@@ -93,10 +93,10 @@ import static org.junit.Assert.*;
  * @see org.ASUX.yaml.YAMLPath
  * @see org.ASUX.yaml.CmdLineArgs
  *
- * @see org.ASUX.yaml.ReadYamlEntry
- * @see org.ASUX.yaml.ListYamlEntry
- * @see org.ASUX.yaml.DeleteYamlEntry
- * @see org.ASUX.yaml.ReplaceYamlEntry
+ * @see ReadYamlEntry
+ * @see ListYamlEntry
+ * @see DeleteYamlEntry
+ * @see ReplaceYamlEntry
  */
 public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
 
@@ -104,7 +104,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
 
     public static final String CLASSNAME = CmdInvoker.class.getName();
 
-    // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
+    // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/STDOUT.txt";
 
     private final Tools tools;
     private transient GenericYAMLScanner YAMLScanner;
@@ -353,7 +353,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
     /**
-     * This is a simpler facade/interface to {@link InputsOutputs#getDataFromReference}, for use by {@link BatchCmdProcessor}
+     * This is a simpler facade/interface to {@link InputsOutputs#getDataFromReference}, for use by {@link BatchYamlProcessor}
      * @param _src a javalang.String value - either inline YAML/JSON, or a filename (must be prefixed with '@'), or a reference to a property within a Batch-file execution (must be prefixed with a '!')
      * @return an object (either any of Node, SequenceNode, MapNode, ScalarNode ..)
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
@@ -370,7 +370,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     //==============================================================================
 
     /**
-     * This is a simpler facade/interface to {@link InputsOutputs#saveDataIntoReference}, for use by {@link BatchCmdProcessor}
+     * This is a simpler facade/interface to {@link InputsOutputs#saveDataIntoReference}, for use by {@link BatchYamlProcessor}
      * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
      * @param _input the object to be saved using the reference provided in _dest paramater
      * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist

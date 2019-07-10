@@ -46,15 +46,15 @@ import static org.junit.Assert.*;
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
- *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.yaml.ReadYamlEntry
- * @see org.ASUX.yaml.ListYamlEntry
- * @see org.ASUX.yaml.DeleteYamlEntry
- * @see org.ASUX.yaml.ReplaceYamlEntry
+ *  <p>See full details of how to use this, in {@link Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
+ * @see ReadYamlEntry
+ * @see ListYamlEntry
+ * @see DeleteYamlEntry
+ * @see ReplaceYamlEntry
 */
 public abstract class AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.AbstractYamlEntryProcessor";
+    public static final String CLASSNAME = AbstractYamlEntryProcessor.class.getName();
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -95,7 +95,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
-     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
+     *  @throws Exception To allow for sub-classes (Example: see @see TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -114,7 +114,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
-     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
+     *  @throws Exception To allow for sub-classes (Example: see @see TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -130,7 +130,7 @@ public abstract class AbstractYamlEntryProcessor {
      *  @param _key The value (typically a String) is what *FAILED* to match the _yamlPath.
      *  @param _parentMap A Placeholder to be used in the future.  Right now it's = null
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
-     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
+     *  @throws Exception To allow for sub-classes (Example: see @see TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) throws Exception;
 
@@ -142,7 +142,7 @@ public abstract class AbstractYamlEntryProcessor {
      *
      *  @param _map This contains the java.utils.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries) containing the entire Tree representing the YAML file.
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
-     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
+     *  @throws Exception To allow for sub-classes (Example: see @see TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
      */
     protected abstract void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) throws Exception;
 

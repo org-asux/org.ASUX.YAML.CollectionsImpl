@@ -40,16 +40,16 @@ import org.ASUX.common.Output;
 import java.util.LinkedList;
 import java.util.LinkedHashMap;
 
-/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
+/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
- *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.yaml.AbstractYamlEntryProcessor
+ *  <p>See full details of how to use this, in {@link Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
+ * @see AbstractYamlEntryProcessor
  */
 public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.ReplaceYamlEntry";
+    public static final String CLASSNAME = ReplaceYamlEntry.class.getName();
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
     protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
@@ -134,7 +134,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
     //==============================================================================
 
     /** This function will be called when a partial match of a YAML path-expression happens.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch}
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onPartialMatch}
      */
     protected boolean onPartialMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
@@ -144,7 +144,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch}
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
     protected boolean onEnd2EndMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 
@@ -161,7 +161,7 @@ public class ReplaceYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called whenever the YAML path-expression fails to match.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail}
+     * See details and warnings in {@link AbstractYamlEntryProcessor#onMatchFail}
      */
     protected void onMatchFail( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
 

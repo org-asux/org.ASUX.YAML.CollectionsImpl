@@ -46,15 +46,15 @@ import java.util.regex.*;
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
- *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
- * @see org.ASUX.yaml.ReadYamlEntry
- * @see org.ASUX.yaml.ListYamlEntry
- * @see org.ASUX.yaml.DeleteYamlEntry
- * @see org.ASUX.yaml.ReplaceYamlEntry
+ *  <p>See full details of how to use this, in {@link Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
+ * @see ReadYamlEntry
+ * @see ListYamlEntry
+ * @see DeleteYamlEntry
+ * @see ReplaceYamlEntry
  */
 public class MacroYamlProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.MacroYamlProcessor";
+    public static final String CLASSNAME = MacroYamlProcessor.class.getName();
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -123,7 +123,7 @@ public class MacroYamlProcessor {
         if ( (_inpMap == null) || (_outpMap==null) ) return false;
 
         boolean bChangesMade = false;
-		// final org.ASUX.yaml.Tools tool = new org.ASUX.yaml.Tools( this.verbose );
+		// final Tools tool = new Tools( this.verbose );
 
         //--------------------------
         for (Object keyAsIs : _inpMap.keySet()) {

@@ -51,7 +51,7 @@ import static org.junit.Assert.*;
 /** <p>This class only contains a collection of static methods, to help to read and write to YAML files / JSON files as well as handle inline-JSON (in command line)</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.YAML.CollectionsImpl.AbstractYamlEntryProcessor
+ * @see org.ASUX.yaml.CollectionsImpl.AbstractYamlEntryProcessor
  */
 public class InputsOutputs {
 

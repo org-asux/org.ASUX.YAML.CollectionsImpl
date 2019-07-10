@@ -162,40 +162,43 @@ public class Cmd {
 
             //======================================================================
             // post completion of YAML processing
-            switch ( cmdLineArgsBasic.cmdType ) {
-                case READ:
-                    @SuppressWarnings("unchecked")
-                    final LinkedList<Object> list = ( LinkedList<Object> ) output;
-                    writer.write( list );
-                    break;
-                case LIST:
-                    @SuppressWarnings("unchecked")
-                    final ArrayList<String> arr = ( ArrayList<String> ) output;
-                    writer.write( arr );
-                    break;
-                case TABLE:
-                    @SuppressWarnings("unchecked")
-                    final LinkedList< ArrayList<String> > list2 = ( LinkedList< ArrayList<String> > ) output;
-                    writer.write( list2 );
-                    break;
-                case DELETE:
-                case INSERT:
-                case REPLACE:
-                case MACRO:
-                case BATCH:
-                    if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): saving the final output " + output + "]" );
-                    if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): final output is of type " + output.getClass().getName() + "]" );
-                    writer.write( output );
-                    break;
-            }
+            if ( output != null ) {
+                switch ( cmdLineArgsBasic.cmdType ) {
+                    case READ:
+                        @SuppressWarnings("unchecked")
+                        final LinkedList<Object> list = ( LinkedList<Object> ) output;
+                        writer.write( list );
+                        break;
+                    case LIST:
+                        @SuppressWarnings("unchecked")
+                        final ArrayList<String> arr = ( ArrayList<String> ) output;
+                        writer.write( arr );
+                        break;
+                    case TABLE:
+                        @SuppressWarnings("unchecked")
+                        final LinkedList< ArrayList<String> > list2 = ( LinkedList< ArrayList<String> > ) output;
+                        writer.write( list2 );
+                        break;
+                    case DELETE:
+                    case INSERT:
+                    case REPLACE:
+                    case MACRO:
+                    case BATCH:
+                        if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): saving the final output " + output + "]" );
+                        if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): final output is of type " + output.getClass().getName() + "]" );
+                        writer.write( output );
+                        break;
+                } // switch
+            } // if output != null
 
             //======================================================================
             // cleanup & close-out things.    This will actually do work for DELETE, INSERT, REPLACE and MACRO commands
             if ( cmdlineargs.outputFilePath.equals("-") ) {
                 // if we're writing to STDOUT/System.out ..
-                if (writer != null) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
+                if ( output == null ) System.out.println("null");
+                if ( writer != null ) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
             } else {
-                if (writer != null) writer.close(); // close the actual file.
+                if ( writer != null ) writer.close(); // close the actual file.
             }
             stdoutSurrogate.flush();
 
