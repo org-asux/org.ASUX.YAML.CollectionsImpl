@@ -97,9 +97,10 @@ public class BatchYamlProcessor extends org.ASUX.yaml.BatchCmdProcessor< LinkedH
     /** <p>The only constructor - public/private/protected</p>
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _offline true if we pretent no internet-access is available, and we use 'cached' AWS-SDK responses - if available.
      */
-    public BatchYamlProcessor( final boolean _verbose, final boolean _showStats ) {
-        super( _verbose, _showStats, null );
+    public BatchYamlProcessor( final boolean _verbose, final boolean _showStats, final boolean _offline ) {
+        super( _verbose, _showStats, _offline, null );
     }
 
     // private BatchYamlProcessor() { this.verbose = false;    this.showStats = true;  } // Do Not use this.

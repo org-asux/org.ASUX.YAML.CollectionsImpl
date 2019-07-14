@@ -333,7 +333,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         case BATCH:
             final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
-            final BatchYamlProcessor batcher = new BatchYamlProcessor( claBatch.verbose, claBatch.showStats );
+            final BatchYamlProcessor batcher = new BatchYamlProcessor( claBatch.verbose, claBatch.showStats, claBatch.isOffline() );
             batcher.setMemoryAndContext( this.memoryAndContext );
             // final LinkedHashMap<String, Object> outpMap2 = new LinkedHashMap<String, Object>();
             final LinkedHashMap<String, Object> outpMap2 = batcher.go( claBatch.batchFilePath, _inputMap );
