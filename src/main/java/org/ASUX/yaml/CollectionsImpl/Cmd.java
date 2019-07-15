@@ -105,7 +105,9 @@ public class Cmd {
         final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
-            cmdLineArgsBasic = new CmdLineArgsBasic( args );
+            cmdLineArgsBasic = new CmdLineArgsBasic();
+            cmdLineArgsBasic.define();
+            cmdLineArgsBasic.parse( args );
             if (cmdLineArgsBasic.verbose) { System.out.print( CLASSNAME + ": >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
 
             cmdlineargs = cmdLineArgsBasic.getSpecificCmd();
@@ -114,8 +116,8 @@ public class Cmd {
             org.ASUX.yaml.CollectionsImpl.CmdInvoker cmdinvoker = new org.ASUX.yaml.CollectionsImpl.CmdInvoker( cmdlineargs.verbose, cmdlineargs.showStats );
             if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): getting started with cmdline args = " + cmdlineargs + " " );
 
-            cmdinvoker.setYamlLibrary( cmdLineArgsBasic.YAMLLibrary );
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): set YAML-Library to [" + cmdLineArgsBasic.YAMLLibrary + "]" );
+            cmdinvoker.setYamlLibrary( cmdLineArgsBasic.getYAMLLibrary() );
+            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): set YAML-Library to [" + cmdLineArgsBasic.getYAMLLibrary() + "]" );
 
             //======================================================================
             // read input, whether it's System.in -or- an actual input-file
