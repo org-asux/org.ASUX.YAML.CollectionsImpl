@@ -12,7 +12,7 @@
 
     <inceptionYear>2019</inceptionYear>
     <description>Cmdline interface to process YAML files, leveraging the brilliantly robust SnakeYAML Java-implementation of YAML-Parsing and YAML-Generation (http://yaml.org)</description>
-	<url>https://github.com/org-asux/org.ASUX.YAML.CollectionsImpl</url>
+	<url>https://ASUX.org</url>
 
 	<parent>
 		<groupId>org.asux</groupId>
