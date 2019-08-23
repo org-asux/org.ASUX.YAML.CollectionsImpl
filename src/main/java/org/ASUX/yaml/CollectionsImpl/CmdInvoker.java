@@ -185,28 +185,6 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         this.YAMLWriter.setYamlLibrary(_l);
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    /**
-     *  <p>Example: For SnakeYAML-library based subclass of this, this should return DumperOptions.class</p>
-     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
-     *  @return name of class of the object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions)
-     */
-    @Override
-    public Class<?> getLibraryOptionsClass() {
-        return String.class;
-    }
-
-    /**
-     *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
-     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
-     * @return instance/object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
-     */
-    @Override
-    public Object getLibraryOptionsObject() {
-        return null;
-    }
-
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
